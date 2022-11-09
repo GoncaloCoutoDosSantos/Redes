@@ -15,7 +15,7 @@ class Node:
 		self.vizinhos = {}
 
 		#tenta ligar se aos vizinhos(ve os que estao ativos)
-		for i in vizinhos[1:]:
+		for i in vizinhos:
 			s = socket.socket()
 			try:
 				s.connect((i,self.port))

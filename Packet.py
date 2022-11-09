@@ -37,10 +37,10 @@ class Packet:
 	def decode_LSA(packet):
 		#Packet LSA
 		print("Receive LSA packet")
-		host = str(packet[2:2 + packet[1]])
+		host = packet[2:2 + packet[1]].decode("utf-8")
 		print(host)
 		vizinhos = []
-		ind = 2 + packet[1] +1
+		ind = 2 + packet[1] + 1
 		for i in range(packet[ind-1]): # Percorre lista dos ip dos vizinhos
 			vizinhos.append((Packet.byte_to_ip(packet[ind:]),packet[ind + 4]))
 			ind = ind + 5
@@ -57,5 +57,7 @@ if __name__ == '__main__':
 	packet = Packet.encode_LSA("n2",vizinhos) 
 
 	print(packet)
-	print(Packet.decode_LSA(packet))
+
+	ret = Packet.decode_LSA(packet)
+	print(ret)
 
