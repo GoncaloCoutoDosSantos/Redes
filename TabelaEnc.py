@@ -3,41 +3,71 @@ from Packet import Packet
 import math
 
 class TabelaEnc:
-	def __init__(vizinhos):
+	def __init__(self,vizinhos):
 		self.dicionario = {}
 		for vizinho in vizinhos:
 			self.dicionario[vizinho] = []
 
-	def updateTempoHost(vizinho, host, timeTaken,timeInitial):
+	def updateTempoHost(self,vizinho, host, timeTaken,timeInitial):
 		novaLista = []
 		for (server,timeTakenOld,timeInitialOld) in self.dicionario[vizinho]:
 			if (server==host):
-				if(timeInitial<=timeInitialOld):
+				if(timeInitial<=timeInitialOld): # se a mensagem for mais velha deita fora
 					return False
-				else:
-					novaLista.append((host,timeTaken,timeInitial))
-					return True
 			else: novaLista.append((server,timeTakenOld,timeInitialOld))
-
 		novaLista.append((host,timeTaken,timeInitial))
-		return True
+		self.dicionario[vizinho] = novaLista
+		if (self.bestVizinho(host)==vizinho):
+			return True
+		else: return False
 
-	def bestVizinho(host):
+	def bestVizinho(self,host):
 		bestTime = math.inf
 		bestVizinho = None
 		for vizinho in self.dicionario:
-			for (server,timeTaken,timeInitial) in vizinho:
-				if (server==host and bestTime==timeTaken):
+			for (server,timeTaken,timeInitial) in self.dicionario[vizinho]:
+				if (server==host and bestTime>timeTaken):
 					bestTime=timeTaken
 					bestVizinho=vizinho
 		return bestVizinho
 
-	def recievePacket(vizinho,packet):
+	def recievePacket(self,vizinho,packet):
 		(host,tempoI,tempos) = Packet.decode_CC(packet)   #todo update tempos
 		timeTaken = time.time_ns()-tempoI
 
-		return TabelaEnc.updateTempoHost(vizinho,host,timeTaken,tempoI)  #retorna true se for para dar flood
+		return self.updateTempoHost(vizinho,host,timeTaken,tempoI)  #retorna true se for para dar flood
+
+	def shutDownVizinho(self,vizinho): #usar quando o vizinho nao responde
+		self.dicionario[vizinho] = []
 
 
+if __name__ == '__main__':
+	tabela = TabelaEnc(['127.0.0.1','127.0.0.2','127.0.0.3'])
+	tempoInicial1 = time.time_ns()
+	time.sleep(0.5)
+	tempoInicial2 = time.time_ns()
+
+	packet1 = Packet.encode_CC('127.5.2.2',tempoInicial1, [])
+	packet2 = Packet.encode_CC('127.5.2.2',tempoInicial2, [])
+	packet3 = Packet.encode_CC('127.2.8.4',tempoInicial1, [])
+
+	print(tabela.recievePacket('127.0.0.1',packet1))
+	time.sleep(0.5)
+	print(tabela.recievePacket('127.0.0.2',packet1))
+	print(tabela.bestVizinho('127.5.2.2'))
 
 
+	tabela.shutDownVizinho('127.0.0.1')
+	print(tabela.bestVizinho('127.5.2.2'))
+
+
+	print(tabela.recievePacket('127.0.0.2',packet2))
+	time.sleep(0.5)
+	print(tabela.recievePacket('127.0.0.1',packet2))
+	print(tabela.bestVizinho('127.5.2.2'))
+
+
+	print(tabela.recievePacket('127.0.0.1',packet3))
+	time.sleep(0.5)
+	print(tabela.recievePacket('127.0.0.2',packet3))
+	print(tabela.bestVizinho('127.2.8.4'))
