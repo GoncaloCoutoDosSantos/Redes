@@ -1,3 +1,5 @@
+import time
+
 
 class Packet:
 	def __init__():
@@ -46,10 +48,14 @@ class Packet:
 			ind = ind + 5
 		return (host,vizinhos)
 
-	def encode_CC(addr,tempoI,tempos):
-		array = bytearray(5)
+	def encode_CC(addr,tempoI,tempos = []):
+		array = bytearray(1 + 1 + len(addr))
 		array[0] = int(1)
-		Packet.ip_to_byte(addr,array,1) #Put IP host
+		array[1] = len(addr)
+		ind = 2
+		for i in addr: #Put IP host
+			array[ind] = ord(i)
+			ind += 1
 		tempoByteA = tempoI.to_bytes(10,'big')
 		tamanho = len(tempos).to_bytes(4,'big')
 		temposByteA = []
@@ -60,11 +66,15 @@ class Packet:
 	def decode_CC(packet):
 		print(packet)
 		print("Receive CC packet")
-		host = Packet.byte_to_ip(packet[1:5]) #Ip do router original
-		tempoI = int.from_bytes(packet[5:15],'big')
+		length = packet[1]
+		host = packet[2:2+length].decode("utf-8") #Ip do router original
+		ind = 2+length
+		tempoI = int.from_bytes(packet[ind:ind+10],'big')
 		tempos = []
-		ind = 19
-		for i in range(int.from_bytes(packet[15:19],'big')): 
+		ind = ind + 10
+		length = int.from_bytes(packet[ind:ind + 4],'big')
+		ind = ind + 4
+		for i in range(length): 
 			tempos.append(int.from_bytes(packet[ind:ind+10],'big'))
 			ind += 10
 		return (host,tempoI,tempos)
@@ -75,10 +85,16 @@ if __name__ == '__main__':
 	vizinhos["10.0.0.21"] = "ola"
 	vizinhos["10.0.1.20"] = "ola"
 
-	packet = Packet.encode_LSA("n2",vizinhos) 
-
+	t = time.time_ns()
+	print(t)
+	packet = Packet.encode_CC("Setefi",t)
 	print(packet)
+	print(Packet.decode_CC(packet))
 
-	ret = Packet.decode_LSA(packet)
-	print(ret)
+	#packet = Packet.encode_LSA("n2",vizinhos) 
+
+	#print(packet)
+
+	#ret = Packet.decode_LSA(packet)
+	#print(ret)
 
