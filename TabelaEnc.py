@@ -5,11 +5,19 @@ import math
 class TabelaEnc:
 	def __init__(self,vizinhos):
 		self.dicionario = {}
+		self.hosts = []
 		for vizinho in vizinhos:
 			self.dicionario[vizinho] = []
 
+	def addVizinho(self,vizinho):
+		if vizinho not in self.dicionario:
+			self.dicionario[vizinho] = []
+		else:
+			print("Vizinho Repetido")
+
 	def updateTempoHost(self,vizinho, host, timeTaken,timeInitial):
 		novaLista = []
+		if host not in self.hosts: self.hosts.append(host)
 		for (server,timeTakenOld,timeInitialOld) in self.dicionario[vizinho]:
 			if (server==host):
 				if(timeInitial<=timeInitialOld): # se a mensagem for mais velha deita fora
@@ -39,6 +47,12 @@ class TabelaEnc:
 
 	def shutDownVizinho(self,vizinho): #usar quando o vizinho nao responde
 		self.dicionario[vizinho] = []
+
+	def print(self):
+		print("Tabela de encaminhamento")
+		for i in self.hosts:
+			v = self.bestVizinho(i)
+			print("Servidor {}: {} custo {}".format(i,v,self.dicionario[v]))
 
 
 if __name__ == '__main__':

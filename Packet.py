@@ -64,8 +64,8 @@ class Packet:
 		return array+tempoByteA+tamanho+tempoByteA
 
 	def decode_CC(packet):
-		print(packet)
-		print("Receive CC packet")
+		#print(packet)
+		#print("Receive CC packet")
 		length = packet[1]
 		host = packet[2:2+length].decode("utf-8") #Ip do router original
 		ind = 2+length
@@ -97,4 +97,3 @@ if __name__ == '__main__':
 
 	#ret = Packet.decode_LSA(packet)
 	#print(ret)
-

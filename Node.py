@@ -6,7 +6,7 @@ import time
 
 class Node:
 	top = {}
-	def __init__(self,vizinhos,mode,port = 12455):
+	def __init__(self,vizinhos,mode,port = 12456):
 		self.mode = mode
 		print("Mode:",self.mode)
 		self.flag = True
@@ -33,8 +33,11 @@ class Node:
 				print("node {} not active".format(i))
 
 		self.table = TabelaEnc(self.vizinhos.keys())
+		self.table.print()
 
 		#self.send_LSA()
+		if self.mode=="server":
+			self.send_CC()
 
 		self.status()
 
@@ -49,7 +52,9 @@ class Node:
 			print("{} in {}:{}".format(addr[0],self.vizinhos_all,addr[0] in self.vizinhos_all))
 			if(True):#addr[0] in self.vizinhos_all):
 				self.vizinhos[addr[0]] = c
-				threading.Thread(target=self.recv,args=(c,addr)).start()
+				self.table.addVizinho(addr[0])
+				self.table.print()
+				threading.Thread(target=self.recv,args=(c,addr[0])).start()
 				#self.top[self.host].append((addr[0],1))
 				#self.send_LSA()
 				self.status()
@@ -58,8 +63,8 @@ class Node:
 
 	def send_CC(self):
 		packet = Packet.encode_CC(self.host,time.time_ns())
-		for i in vizinhos:
-			vizinhos[i].send(packet)
+		for i in self.vizinhos:
+			self.vizinhos[i].send(packet)
 
 	def send_LSA(self):
 		print("host"+str(self.host))
@@ -95,14 +100,16 @@ class Node:
 					self.top[ori] = vizinhos
 					self.send_flood(data)
 					self.status()
-			else if (data[0] == 1):
+			elif (data[0] == 1):
 				print("receive CC from {}:".format(addr))
 				(host,tempoI,tempos) = Packet.decode_CC(data)
-				print("Host: {} | TempoI: {} | Tempos: {}".format(host,tempoI,tempos))
-				t = time.time_ns()
-				diff_t = t - tempoI
-				if(updateTempoHost(addr,host,diff_t,tempoI)):
-					self.send_flood(data,addr) 
+				print("Host: {} | TempoI: {} | Tempos: {}".format(host,tempoI,tempos)) 
+				if host != self.host:
+					t = time.time_ns()
+					diff_t = t - tempoI
+					if(self.table.updateTempoHost(addr,host,diff_t,tempoI)):
+						self.send_flood(data,addr) 
+				self.table.print()
 			else:
 				print("Receive from {} data:{}".format(addr,data))
 
