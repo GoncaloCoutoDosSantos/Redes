@@ -1,6 +1,18 @@
 import time
 
 
+#################################################################
+
+
+
+#			TODO
+
+# Erro quando perde acesso ao servidor mandar para tras a informar os outros nos 
+# Novo packet referente a tabela de encaminhamento que informa outros nodos que ja nao conseguem chegar ao servidor por aquele nodo 
+# Condiçao de paragem nao conseguje remover aquele path da tablea de encaminhamento devido a ela ja n existir
+
+
+
 class Packet:
 	def __init__():
 		pass
@@ -17,36 +29,13 @@ class Packet:
 			ret = ret + "." + str(arr[i])
 		return ret
 
-	def encode_LSA(addr,vizinhos_dic):
-		vizinhos = vizinhos_dic.keys()
-		packet = bytearray(1 + 1 + len(addr) + 1 + (len(vizinhos) * 5))
-		packet[0] = 0 # Set mode LSA
-		packet[1] = len(addr)
-		ind = 2
-		for i in addr:
-			packet[ind] = ord(i)
-			ind = ind + 1
+	def encode_HELLO():
+		array = bytearray(1)
+		array[0] = int(0)
+		return array
 
-		packet[ind] = len(vizinhos)# Number of vizinhos
-		ind = ind + 1
-		for i in vizinhos:
-			Packet.ip_to_byte(i,packet,ind) # IP vizinhos
-			ind = ind + 4
-			packet[ind] = 1 #Set Custo
-			ind = ind + 1
-		return packet
-
-	def decode_LSA(packet):
-		#Packet LSA
-		print("Receive LSA packet")
-		host = packet[2:2 + packet[1]].decode("utf-8")
-		print(host)
-		vizinhos = []
-		ind = 2 + packet[1] + 1
-		for i in range(packet[ind-1]): # Percorre lista dos ip dos vizinhos
-			vizinhos.append((Packet.byte_to_ip(packet[ind:]),packet[ind + 4]))
-			ind = ind + 5
-		return (host,vizinhos)
+	def decode_HELLO(packet):
+		return packet[0]
 
 	def encode_CC(addr,tempoI,tempos = []):
 		array = bytearray(1 + 1 + len(addr))
@@ -97,3 +86,4 @@ if __name__ == '__main__':
 
 	#ret = Packet.decode_LSA(packet)
 	#print(ret)
+

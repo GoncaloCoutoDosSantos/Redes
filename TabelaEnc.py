@@ -1,87 +1,89 @@
-import time 
-from Packet import Packet
-import math
+import time
 
-class TabelaEnc:
-	def __init__(self,vizinhos):
-		self.dicionario = {}
-		self.hosts = []
-		for vizinho in vizinhos:
-			self.dicionario[vizinho] = []
 
-	def addVizinho(self,vizinho):
-		if vizinho not in self.dicionario:
-			self.dicionario[vizinho] = []
-		else:
-			print("Vizinho Repetido")
+#################################################################
 
-	def updateTempoHost(self,vizinho, host, timeTaken,timeInitial):
-		novaLista = []
-		if host not in self.hosts: self.hosts.append(host)
-		for (server,timeTakenOld,timeInitialOld) in self.dicionario[vizinho]:
-			if (server==host):
-				if(timeInitial<=timeInitialOld): # se a mensagem for mais velha deita fora
-					return False
-			else: novaLista.append((server,timeTakenOld,timeInitialOld))
-		novaLista.append((host,timeTaken,timeInitial))
-		self.dicionario[vizinho] = novaLista
-		if (self.bestVizinho(host)==vizinho):
-			return True
-		else: return False
 
-	def bestVizinho(self,host):
-		bestTime = math.inf
-		bestVizinho = None
-		for vizinho in self.dicionario:
-			for (server,timeTaken,timeInitial) in self.dicionario[vizinho]:
-				if (server==host and bestTime>timeTaken):
-					bestTime=timeTaken
-					bestVizinho=vizinho
-		return bestVizinho
 
-	def recievePacket(self,vizinho,packet):
-		(host,tempoI,tempos) = Packet.decode_CC(packet)   #todo update tempos
-		timeTaken = time.time_ns()-tempoI
+#			TODO
 
-		return self.updateTempoHost(vizinho,host,timeTaken,tempoI)  #retorna true se for para dar flood
+# Erro quando perde acesso ao servidor mandar para tras a informar os outros nos 
+# Novo packet referente a tabela de encaminhamento que informa outros nodos que ja nao conseguem chegar ao servidor por aquele nodo 
+# Condiçao de paragem nao conseguje remover aquele path da tablea de encaminhamento devido a ela ja n existir
 
-	def shutDownVizinho(self,vizinho): #usar quando o vizinho nao responde
-		self.dicionario[vizinho] = []
 
-	def print(self):
-		print("Tabela de encaminhamento")
-		for i in self.hosts:
-			v = self.bestVizinho(i)
-			print("Servidor {}: {} custo {}".format(i,v,self.dicionario[v]))
+
+class Packet:
+	def __init__():
+		pass
+
+	def ip_to_byte(ip,arr,ind = 0):
+		ip = ip.split(".")
+		for i in range(4):
+			arr[ind + i] = int(ip[i])
+
+	def byte_to_ip(arr):
+		ret = ""
+		ret = ret + str(arr[0])
+		for i in range(1,4):
+			ret = ret + "." + str(arr[i])
+		return ret
+
+	def encode_HELLO():
+		array = bytearray(1)
+		array[0] = int(0)
+		return array
+
+	def decode_HELLO(packet):
+		return packet[0]
+
+	def encode_CC(addr,tempoI,tempos = []):
+		array = bytearray(1 + 1 + len(addr))
+		array[0] = int(1)
+		array[1] = len(addr)
+		ind = 2
+		for i in addr: #Put IP host
+			array[ind] = ord(i)
+			ind += 1
+		tempoByteA = tempoI.to_bytes(10,'big')
+		tamanho = len(tempos).to_bytes(4,'big')
+		temposByteA = []
+		for i in tempos:
+			temposByteA.append(i.to_bytes(10,'big'))
+		return array+tempoByteA+tamanho+tempoByteA
+
+	def decode_CC(packet):
+		#print(packet)
+		#print("Receive CC packet")
+		length = packet[1]
+		host = packet[2:2+length].decode("utf-8") #Ip do router original
+		ind = 2+length
+		tempoI = int.from_bytes(packet[ind:ind+10],'big')
+		tempos = []
+		ind = ind + 10
+		length = int.from_bytes(packet[ind:ind + 4],'big')
+		ind = ind + 4
+		for i in range(length): 
+			tempos.append(int.from_bytes(packet[ind:ind+10],'big'))
+			ind += 10
+		return (host,tempoI,tempos)
 
 
 if __name__ == '__main__':
-	tabela = TabelaEnc(['127.0.0.1','127.0.0.2','127.0.0.3'])
-	tempoInicial1 = time.time_ns()
-	time.sleep(0.5)
-	tempoInicial2 = time.time_ns()
+	vizinhos = {}
+	vizinhos["10.0.0.21"] = "ola"
+	vizinhos["10.0.1.20"] = "ola"
 
-	packet1 = Packet.encode_CC('127.5.2.2',tempoInicial1, [])
-	packet2 = Packet.encode_CC('127.5.2.2',tempoInicial2, [])
-	packet3 = Packet.encode_CC('127.2.8.4',tempoInicial1, [])
+	t = time.time_ns()
+	print(t)
+	packet = Packet.encode_CC("Setefi",t)
+	print(packet)
+	print(Packet.decode_CC(packet))
 
-	print(tabela.recievePacket('127.0.0.1',packet1))
-	time.sleep(0.5)
-	print(tabela.recievePacket('127.0.0.2',packet1))
-	print(tabela.bestVizinho('127.5.2.2'))
+	#packet = Packet.encode_LSA("n2",vizinhos) 
 
+	#print(packet)
 
-	tabela.shutDownVizinho('127.0.0.1')
-	print(tabela.bestVizinho('127.5.2.2'))
+	#ret = Packet.decode_LSA(packet)
+	#print(ret)
 
-
-	print(tabela.recievePacket('127.0.0.2',packet2))
-	time.sleep(0.5)
-	print(tabela.recievePacket('127.0.0.1',packet2))
-	print(tabela.bestVizinho('127.5.2.2'))
-
-
-	print(tabela.recievePacket('127.0.0.1',packet3))
-	time.sleep(0.5)
-	print(tabela.recievePacket('127.0.0.2',packet3))
-	print(tabela.bestVizinho('127.2.8.4'))

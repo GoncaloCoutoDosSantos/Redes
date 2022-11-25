@@ -6,7 +6,7 @@ import time
 
 class Node:
 	top = {}
-	def __init__(self,vizinhos,mode,port = 12456):
+	def __init__(self,vizinhos,mode,port = 12452):
 		self.mode = mode
 		print("Mode:",self.mode)
 		self.flag = True
@@ -33,11 +33,10 @@ class Node:
 				print("node {} not active".format(i))
 
 		self.table = TabelaEnc(self.vizinhos.keys())
-		self.table.print()
 
 		#self.send_LSA()
 		if self.mode=="server":
-			self.send_CC()
+			threading.Thread(target=self.send_CC_thread,args=()).start()
 
 		self.status()
 
@@ -53,10 +52,13 @@ class Node:
 			if(True):#addr[0] in self.vizinhos_all):
 				self.vizinhos[addr[0]] = c
 				self.table.addVizinho(addr[0])
-				self.table.print()
 				threading.Thread(target=self.recv,args=(c,addr[0])).start()
-				#self.top[self.host].append((addr[0],1))
-				#self.send_LSA()
+
+				if self.mode=="server":
+					self.send_CC()
+				elif self.mode=="client":
+					self.send_HELLO()
+
 				self.status()
 			else:
 				c.close()
@@ -64,42 +66,61 @@ class Node:
 	def send_CC(self):
 		packet = Packet.encode_CC(self.host,time.time_ns())
 		for i in self.vizinhos:
-			self.vizinhos[i].send(packet)
+			self.send(i,packet)
 
-	def send_LSA(self):
-		print("host"+str(self.host))
-		packet = Packet.encode_LSA(self.host,self.vizinhos)
-		for i in self.vizinhos:
-				print(type(self.vizinhos[i]))
-				self.vizinhos[i].send(packet)
+	def send_CC_thread(self):
+		while self.flag:
+			print("send CC")	
+			self.send_CC()
+			time.sleep(60)
+
+	def send_HELLO(self):
+		print("Send Hello")
+		packet = Packet.encode_HELLO()
+		hosts = self.table.getHosts()
+		print(hosts)
+		vs = []
+		for i in hosts:
+			v = self.table.bestVizinho(i)
+			if v not in vs:
+				print(v)
+				vs.append(v)
+				self.send(v,packet)
 
 	def send_flood(self,packet,addr = ""):
 		for i in self.vizinhos:
 			if i != addr:
-				self.vizinhos[i].send(packet)
+				print("send mesg to {}".format(i))
+				self.send(i,packet)
+			else:
+				print("didn't send to {}".format(i))
 
-	#call to create treat to send
-	def send_normal(self,msg,host,port):
-		s = socket.socket()
-		s.connect((host,port))
-		s.send(msg)
+	def send(self,i,packet):
+		try:
+			self.vizinhos[i].send(packet)
+		except:
+			self.rm_Vizinho(i)
 
-	#threaed send
-	def send(self,msg,host,port):
-		threading.Thread(target=self.send_normal,args=(msg,host,port)).start()
 
 	def recv(self,s,addr):
-		while self.flag:
-			data  = s.recv(1024)
-			if(data[0] == 0):
-				print("receive LSA from {}:".format(addr))
-				ori,vizinhos = Packet.decode_LSA(data)
-				print("Origem: {} | Vizinhos: {}".format(ori,vizinhos))
-				
-				if(not(ori in self.top) or self.top[ori] != vizinhos):
-					self.top[ori] = vizinhos
-					self.send_flood(data)
-					self.status()
+		inflag = True
+		while self.flag and inflag:
+			data = []
+			try:
+				data = s.recv(1024)
+			except:pass
+			
+			if(len(data) == 0):
+				self.rm_Vizinho(addr)
+				inflag = False
+			elif(data[0] == 0):
+				print("receive Hello from {}:".format(addr))
+				mesg = Packet.decode_HELLO(data)
+				if self.mode == "server":
+					self.send_CC()
+				elif self.mode == "client":
+					self.send_HELLO()
+
 			elif (data[0] == 1):
 				print("receive CC from {}:".format(addr))
 				(host,tempoI,tempos) = Packet.decode_CC(data)
@@ -109,15 +130,29 @@ class Node:
 					diff_t = t - tempoI
 					if(self.table.updateTempoHost(addr,host,diff_t,tempoI)):
 						self.send_flood(data,addr) 
-				self.table.print()
+					else:
+						print("No flood")
+				self.status()
 			else:
 				print("Receive from {} data:{}".format(addr,data))
+		print("Sai recv {}".format(addr))
+
+	def rm_Vizinho(self,addr):
+		self.vizinhos.pop(addr)
+		self.table.rmVizinho(addr)
+		self.status()
+		if self.mode == "server":
+			self.send_CC()
+		elif self.mode == "client":
+			self.send_HELLO()
 
 	def status(self):
 		print("Vizinhos Ativos:",self.vizinhos.keys())
 		#print("Topologia:")
 		#for i in self.top:
 			#print("Node {}:{}".format(i,self.top[i]))
+		self.table.print()
+		print("\n\n----------------------------------------------------------------------")
 
 	def close(self):
 		pass
