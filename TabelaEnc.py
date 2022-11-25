@@ -46,7 +46,7 @@ class TabelaEnc:
 		else:
 			print("add:Vizinho Repetido")
 
-	def rmVizinho(self,vizinho):
+	def rmVizinho(self,vizinho): #todo ao remover verificar se não existem mais entradas para o servidor, caso aconteça enviar msg de erro
 		if vizinho in self.dicionario:
 			self.dicionario.pop(vizinho)
 		else:

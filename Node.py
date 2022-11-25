@@ -145,17 +145,18 @@ class Node:
 				addrDest = Packet.decode_SA(data)
 				print("Endereço destino: {}".format(addrDest)) 
 				#Verifica se já tem a stream
-				for (server,entrada,saida) in self.streams:
-					if(server==addrDest):
+				for (server,entrada,saida) in self.streams: 
+					if(server==addrDest): #Se tiver a stream vai começar a enviar
 						saida = saida + [addr]
-					else:
+					else: #Se não possuir a stream
 						vizinho = self.table.bestVizinho(addrDest)
-						if(vizinho==None):
+						if(vizinho==None): #Caso não haja caminho para a stream devolve erro
 							#retorna mensagem de erro
 							vizinho=None
-						else:
-							self.SAConfirmations = self.SAConfirmations + [addrDest]
+						else: #Caso contrário vai pedir ao nodo
+							self.SAConfirmations = self.SAConfirmations + [(addr,addrDest)]
 							self.send_SA(addrDest)
+
 			else:
 				print("Receive from {} data:{}".format(addr,data))
 		print("Sai recv {}".format(addr))
