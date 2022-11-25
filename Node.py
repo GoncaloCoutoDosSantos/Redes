@@ -14,6 +14,8 @@ class Node:
 		print("IP:",self.host)
 		self.port = port
 		self.vizinhos_all = vizinhos
+		self.streams = []
+		self.SAConfirmations = []
 		print("Todos vizinhos:",self.vizinhos_all)
 		
 		#self.top[self.host] = []
@@ -60,6 +62,11 @@ class Node:
 				self.status()
 			else:
 				c.close()
+
+	def send_SA(self,serverDestino):
+		vizinho = self.table.bestVizinho(serverDestino)
+		packet = Packet.encode_SA(serverDestino)
+		self.vizinhos[vizinho].send(packet)
 
 	def send_CC(self):
 		packet = Packet.encode_CC(self.host,time.time_ns())
@@ -110,6 +117,23 @@ class Node:
 					if(self.table.updateTempoHost(addr,host,diff_t,tempoI)):
 						self.send_flood(data,addr) 
 				self.table.print()
+			elif (data[0] == 2):
+				print("receive CC from {}:".format(addr))
+				addrDest = Packet.decode_SA(data)
+				print("Endereço destino: {}".format(addrDest)) 
+				#Verifica se já tem a stream
+				for (server,entrada,saida) in self.streams:
+					if(server==addrDest):
+						saida = saida + [addr]
+					else:
+						vizinho = self.table.bestVizinho(addrDest)
+						if(vizinho==None):
+							#retorna mensagem de erro
+							vizinho=None
+						else:
+							self.SAConfirmations = self.SAConfirmations + [addrDest]
+							self.send_SA(addrDest)
+
 			else:
 				print("Receive from {} data:{}".format(addr,data))
 

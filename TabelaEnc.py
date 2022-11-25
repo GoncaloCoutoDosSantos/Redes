@@ -4,6 +4,7 @@ import math
 
 class TabelaEnc:
 	def __init__(self,vizinhos):
+		self.lastWorking = None 
 		self.dicionario = {}
 		self.hosts = []
 		for vizinho in vizinhos:
@@ -61,24 +62,24 @@ if __name__ == '__main__':
 	time.sleep(0.5)
 	tempoInicial2 = time.time_ns()
 
-	packet1 = Packet.encode_CC('127.5.2.2',tempoInicial1, [])
-	packet2 = Packet.encode_CC('127.5.2.2',tempoInicial2, [])
+	packet1 = Packet.encode_CC('s1',tempoInicial1, [])
+	packet2 = Packet.encode_CC('s1',tempoInicial2, [])
 	packet3 = Packet.encode_CC('127.2.8.4',tempoInicial1, [])
 
 	print(tabela.recievePacket('127.0.0.1',packet1))
 	time.sleep(0.5)
 	print(tabela.recievePacket('127.0.0.2',packet1))
-	print(tabela.bestVizinho('127.5.2.2'))
+	print(tabela.bestVizinho('s1'))
 
 
 	tabela.shutDownVizinho('127.0.0.1')
-	print(tabela.bestVizinho('127.5.2.2'))
+	print(tabela.bestVizinho('s1'))
 
 
 	print(tabela.recievePacket('127.0.0.2',packet2))
 	time.sleep(0.5)
 	print(tabela.recievePacket('127.0.0.1',packet2))
-	print(tabela.bestVizinho('127.5.2.2'))
+	print(tabela.bestVizinho('s1'))
 
 
 	print(tabela.recievePacket('127.0.0.1',packet3))
