@@ -68,17 +68,34 @@ class Packet:
 			ind += 10
 		return (host,tempoI,tempos)
 
+	def encode_SA(addr): #Stream ASK
+		array = bytearray(1 + 1 + len(addr))
+		array[0] = int(2)
+		array[1] = len(addr)
+		ind = 2
+		for i in addr: #Put IP host
+			array[ind] = ord(i)
+			ind += 1
+		return array
+
+	def decode_SA(packet): #Stream ASK
+		length = packet[1]
+		addr = packet[2:2+length].decode("utf-8") #Ip do router original
+		return addr
 
 if __name__ == '__main__':
 	vizinhos = {}
 	vizinhos["10.0.0.21"] = "ola"
 	vizinhos["10.0.1.20"] = "ola"
 
-	t = time.time_ns()
-	print(t)
-	packet = Packet.encode_CC("Setefi",t)
-	print(packet)
-	print(Packet.decode_CC(packet))
+	pacote = Packet.encode_SA("bronze")
+	origem = Packet.decode_SA(pacote)
+	print("Origem:"+origem)
+	#t = time.time_ns()
+	#print(t)
+	#packet = Packet.encode_CC("Setefi",t)
+	#print(packet)
+	#print(Packet.decode_CC(packet))
 
 	#packet = Packet.encode_LSA("n2",vizinhos) 
 
