@@ -21,6 +21,7 @@ class Node:
 		#self.top[self.host] = []
 		self.vizinhos = {}
 
+
 		#tenta ligar se aos vizinhos(ve os que estao ativos)
 		for i in vizinhos:
 			s = socket.socket()
@@ -42,6 +43,10 @@ class Node:
 
 		self.status()
 
+		threading.Thread(target=self.listener,args=()).start()
+
+
+	def listener(self):
 		self.s = socket.socket()
 		self.s.bind(("",port))
 
@@ -68,7 +73,6 @@ class Node:
 					self.send_FR()
 
 				self.status()
-				self.nodeInterface()
 			else:
 				c.close()
 
@@ -214,7 +218,8 @@ class Node:
 	def off(self):
 		for i in self.vizinhos:
 			self.vizinhos[i].close()
-		self.nodeInterface()
+			print("Vizinho Desconectado: ",i)
+
 
 	def on(self):
 		for i in self.vizinhos_all:
@@ -228,27 +233,33 @@ class Node:
 			except:
 				s.close()
 				print("node {} not active".format(i))
-		self.nodeInterface()
+
 
 	def nodeInterface(self):
-		print("Comando:")
-		comando = input()
-		if(comando=="off"):
-			self.off()
-		elif(comando=="on"):
-			self.on()
+		while(self.flag):
+			print("Comando:")
+			comando = input()
+			if(comando=="off"):
+				self.off()
+			elif(comando=="on"):
+				self.on()
+
+
+if __name__ == '__main__':
+	parser = argparse.ArgumentParser()
+	parser.add_argument("vizinhos",nargs="*")
+	parser.add_argument("-m","--mode",choices=["server","client"],default="client")
+
+	args = parser.parse_args()
+
+	t1 = Node(args.vizinhos,args.mode)
+	t1.nodeInterface()
 
 
 
 
-
-parser = argparse.ArgumentParser()
-parser.add_argument("vizinhos",nargs="*")
-parser.add_argument("-m","--mode",choices=["server","client"],default="client")
-
-args = parser.parse_args()
 #print(args.vizinhos,args.mode)
 
 
-t1 = Node(args.vizinhos,args.mode)
+#t1 = Node(args.vizinhos,args.mode)
 #t1.send(bytes("ola","utf-8"),sys.argv[1],12451)
