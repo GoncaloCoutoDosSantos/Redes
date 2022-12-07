@@ -214,6 +214,7 @@ class Node:
 	def off(self):
 		for i in self.vizinhos:
 			self.vizinhos[i].close()
+		self.nodeInterface()
 
 	def on(self):
 		for i in self.vizinhos_all:
@@ -227,6 +228,7 @@ class Node:
 			except:
 				s.close()
 				print("node {} not active".format(i))
+		self.nodeInterface()
 
 	def nodeInterface(self):
 		print("Comando:")
