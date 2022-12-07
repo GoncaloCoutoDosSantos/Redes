@@ -81,9 +81,9 @@ class Node:
 			self.send_CC()
 			time.sleep(60)
 
-	def send_HELLO(self):
-		print("Send Hello")
-		packet = Packet.encode_HELLO()
+	def send_FR(self):
+		print("Send FR")
+		packet = Packet.encode_FR()
 		hosts = self.table.getHosts()
 		print(hosts)
 		vs = []
@@ -93,6 +93,12 @@ class Node:
 				print(v)
 				vs.append(v)
 				self.send(v,packet)
+
+	def send_SBYE(self,serverIndisponivel): #TODO test
+		print("Send SBYE")
+		packet = Packet.encode_SBYE(serverIndisponivel)
+		for i in self.vizinhos:
+			self.send(i,packet)
 
 	def send_flood(self,packet,addr = ""):
 		for i in self.vizinhos:
@@ -140,23 +146,30 @@ class Node:
 					else:
 						print("No flood")
 				self.status()
-			elif (data[0] == 2):
-				print("receive CC from {}:".format(addr))
+			elif (data[0] == 2): #TODO test
+				print("receive SA from {}:".format(addr))
 				addrDest = Packet.decode_SA(data)
 				print("Endereço destino: {}".format(addrDest)) 
 				#Verifica se já tem a stream
+				hasStream = False
 				for (server,entrada,saida) in self.streams: 
 					if(server==addrDest): #Se tiver a stream vai começar a enviar
 						saida = saida + [addr]
-					else: #Se não possuir a stream
-						vizinho = self.table.bestVizinho(addrDest)
-						if(vizinho==None): #Caso não haja caminho para a stream devolve erro
-							#retorna mensagem de erro
-							vizinho=None
-						else: #Caso contrário vai pedir ao nodo
-							self.SAConfirmations = self.SAConfirmations + [(addr,addrDest)]
-							self.send_SA(addrDest)
-
+						hasStream = True
+						break
+				if(not hasStream): #Se não possuir a stream
+					vizinho = self.table.bestVizinho(addrDest)
+					if(vizinho==None): #Caso não haja caminho para a stream flood SBYE TODO atenção a este caso porque deve ser só redondante
+						self.send_SBYE(addrDest)
+					else: #Caso contrário vai pedir ao nodo mais rapido
+						self.SAConfirmations = self.SAConfirmations + [(addr,addrDest)]
+						self.send_SA(addrDest)
+						#Esperar por resposta??
+			elif (data[0] == 3): #TODO test
+				print("receive SBYE from {}:".format(addr))
+				serverToRemove = Packet.decode_FR(data)
+				if(self.table.rmServerVizinho(serverToRemove,addr)): #rmServerVizinho deteta se é necessario enviar SBYE
+					self.send_SBYE(addrDest)
 			else:
 				print("Receive from {} data:{}".format(addr,data))
 		print("Sai recv {}".format(addr))

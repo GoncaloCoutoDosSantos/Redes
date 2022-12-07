@@ -29,12 +29,12 @@ class Packet:
 			ret = ret + "." + str(arr[i])
 		return ret
 
-	def encode_HELLO():
+	def encode_FR(): #Flood request
 		array = bytearray(1)
 		array[0] = int(0)
 		return array
 
-	def decode_HELLO(packet):
+	def decode_FR(packet): #Flood request
 		return packet[0]
 
 	def encode_CC(addr,tempoI,tempos = []):
@@ -82,6 +82,22 @@ class Packet:
 		length = packet[1]
 		addr = packet[2:2+length].decode("utf-8") #Ip do router original
 		return addr
+
+def encode_SBYE(addr): #Node with no acess to server addr
+		array = bytearray(1 + 1 + len(addr))
+		array[0] = int(3)
+		array[1] = len(addr)
+		ind = 2
+		for i in addr: #Put IP host
+			array[ind] = ord(i)
+			ind += 1
+		return array
+
+def decode_SBYE(packet): #Node with no acess to server addr
+	length = packet[1]
+	addr = packet[2:2+length].decode("utf-8") #Ip do router original
+	return addr
+
 
 if __name__ == '__main__':
 	vizinhos = {}

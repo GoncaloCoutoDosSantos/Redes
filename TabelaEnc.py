@@ -10,6 +10,7 @@ class TabelaEnc:
 		for vizinho in vizinhos:
 			self.dicionario[vizinho] = []
 
+
 	def updateTempoHost(self,vizinho, host, timeTaken,timeInitial):
 		novaLista = []
 		if host not in self.hosts: self.hosts.append(host)
@@ -24,6 +25,7 @@ class TabelaEnc:
 			return True
 		else: return False
 
+
 	def bestVizinho(self,host):
 		bestTime = math.inf
 		bestVizinho = None
@@ -34,11 +36,13 @@ class TabelaEnc:
 					bestVizinho=vizinho
 		return bestVizinho
 
+
 	def recievePacket(self,vizinho,packet):
 		(host,tempoI,tempos) = Packet.decode_CC(packet)   #todo update tempos
 		timeTaken = time.time_ns()-tempoI
 
 		return self.updateTempoHost(vizinho,host,timeTaken,tempoI)  #retorna true se for para dar flood
+
 
 	def addVizinho(self,vizinho):
 		if vizinho not in self.dicionario:
@@ -46,14 +50,31 @@ class TabelaEnc:
 		else:
 			print("add:Vizinho Repetido")
 
+
 	def rmVizinho(self,vizinho): #todo ao remover verificar se não existem mais entradas para o servidor, caso aconteça enviar msg de erro
 		if vizinho in self.dicionario:
 			self.dicionario.pop(vizinho)
 		else:
 			print("rm:vizinho inexistente")
 
+
+	def rmServerVizinho(self,serverDestino,vizinho): #Se retornar true então flood SBYE
+		if(self.bestVizinho(serverDestino)==None):
+			return False #Se o servidor já não existir não faz nada
+
+		tamanhoInicial = len(self.dicionario[vizinho])
+		self.dicionario[vizinho][:] = ((server,timeTakenOld,timeInitialOld) for (server,timeTakenOld,timeInitialOld) in self.dicionario[vizinho] if server!=serverDestino)
+		tamanhoFinal = self.dicionario[vizinho]
+		
+		if(tamanhoInicial == len(tamanhoFinal)):
+			print("Tamanho inalterado")
+		elif(tamanhoFinal==0): 
+			return True #flood SBYE
+		return False
+
 	def getHosts(self):
 		return self.hosts
+
 
 	def print(self):
 		print("Tabela de encaminhamento")
@@ -77,8 +98,11 @@ if __name__ == '__main__':
 	print(tabela.recievePacket('127.0.0.2',packet1))
 	print(tabela.bestVizinho('127.5.2.2'))
 
-
-	tabela.shutDownVizinho('127.0.0.1')
+	print(tabela.recievePacket('127.0.0.2',packet3))
+	tabela.rmServerVizinho('127.5.2.2','127.0.0.2')
+	print("yo")
+"""
+	tabela.rmVizinho('127.0.0.1')
 	print(tabela.bestVizinho('127.5.2.2'))
 
 
@@ -92,38 +116,4 @@ if __name__ == '__main__':
 	time.sleep(0.5)
 	print(tabela.recievePacket('127.0.0.2',packet3))
 	print(tabela.bestVizinho('127.2.8.4'))
-
-
-
-if __name__ == '__main__':
-	vizinhos = {}
-	vizinhos["10.0.0.21"] = "ola"
-	vizinhos["10.0.1.20"] = "ola"
-
-
-	packet1 = Packet.encode_CC('s1',tempoInicial1, [])
-	packet2 = Packet.encode_CC('s1',tempoInicial2, [])
-	packet3 = Packet.encode_CC('127.2.8.4',tempoInicial1, [])
-
-	print(tabela.recievePacket('127.0.0.1',packet1))
-	time.sleep(0.5)
-	print(tabela.recievePacket('127.0.0.2',packet1))
-	print(tabela.bestVizinho('s1'))
-
-	#print(packet)
-
-	tabela.shutDownVizinho('127.0.0.1')
-	print(tabela.bestVizinho('s1'))
-
-
-	print(tabela.recievePacket('127.0.0.2',packet2))
-	time.sleep(0.5)
-	print(tabela.recievePacket('127.0.0.1',packet2))
-	print(tabela.bestVizinho('s1'))
-
-
-	print(tabela.recievePacket('127.0.0.1',packet3))
-	time.sleep(0.5)
-	print(tabela.recievePacket('127.0.0.2',packet3))
-	print(tabela.bestVizinho('127.2.8.4'))
-
+"""
