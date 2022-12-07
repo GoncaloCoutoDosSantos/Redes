@@ -232,9 +232,9 @@ class Node:
 		print("Comando:")
 		comando = input()
 		if(comando=="off"):
-			self.off(self)
+			self.off()
 		elif(comando=="on"):
-			self.on(self)
+			self.on()
 
 
 
