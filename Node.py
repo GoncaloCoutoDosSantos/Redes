@@ -47,6 +47,8 @@ class Node:
 
 		#listen for new connections
 		self.s.listen(5)
+
+		threading.Thread(target=self.nodeInterface,args=()).start()
 		
 		if(self.mode!='server'): #TODO tirar daqui Se nao for servidor pedir stream
 			self.send_SA('Server')
@@ -225,6 +227,17 @@ class Node:
 			except:
 				s.close()
 				print("node {} not active".format(i))
+
+	def nodeInterface(self):
+		print("Comando:")
+		comando = input()
+		if(comando=="off"):
+			self.off(self)
+		elif(comando=="on"):
+			self.on(self)
+
+
+
 
 
 parser = argparse.ArgumentParser()
