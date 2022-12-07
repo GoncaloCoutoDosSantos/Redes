@@ -48,7 +48,7 @@ class Node:
 
 	def listener(self):
 		self.s = socket.socket()
-		self.s.bind("",self.port)
+		self.s.bind(("",self.port))
 
 		#listen for new connections
 		self.s.listen(5)
@@ -155,7 +155,7 @@ class Node:
 				print("Host: {} | TempoI: {} | Tempos: {}".format(host,tempoI,tempos)) 
 				if host != self.host:
 					t = time.time_ns()
-					diff_t = closet - tempoI
+					diff_t = t - tempoI
 					if(self.table.updateTempoHost(addr,host,diff_t,tempoI)):
 						self.send_flood(data,addr) 
 					else:
@@ -219,6 +219,7 @@ class Node:
 		for i in self.vizinhos:
 			self.vizinhos[i].close()
 			print("Vizinho Desconectado: ",i)
+		self.s.close()
 
 
 	def on(self):
@@ -241,6 +242,7 @@ class Node:
 			comando = input()
 			if(comando=="off"):
 				self.off()
+				self.flag= not self.flag
 			elif(comando=="on"):
 				self.on()
 
