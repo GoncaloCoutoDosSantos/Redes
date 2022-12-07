@@ -6,7 +6,7 @@ import time
 
 class Node:
 	top = {}
-	def __init__(self,vizinhos,mode,port = 12452):
+	def __init__(self,vizinhos,mode,port = 12457):
 		self.mode = mode
 		print("Mode:",self.mode)
 		self.flag = True
@@ -47,6 +47,9 @@ class Node:
 
 		#listen for new connections
 		self.s.listen(5)
+		
+		if(self.mode!='server'): #TODO tirar daqui Se nao for servidor pedir stream
+			self.send_SA('Server')
 		while self.flag:
 			c, addr = self.s.accept()
 			print('Got connection from', addr)
@@ -56,17 +59,23 @@ class Node:
 				self.table.addVizinho(addr[0])
 				threading.Thread(target=self.recv,args=(c,addr[0])).start()
 
+				if(self.mode!='server'): #TODO tirar daqui Se nao for servidor pedir stream
+					self.send_SA('Server')
 				if self.mode=="server":
 					self.send_CC()
 				elif self.mode=="client":
-					self.send_HELLO()
+					self.send_FR()
 
 				self.status()
 			else:
 				c.close()
 
 	def send_SA(self,serverDestino):
+		print("Send SA")
 		vizinho = self.table.bestVizinho(serverDestino)
+		if(vizinho==None):
+			print("Não há caminho conhecido para o servidor")
+			return
 		packet = Packet.encode_SA(serverDestino)
 		self.vizinhos[vizinho].send(packet)
 
@@ -79,7 +88,7 @@ class Node:
 		while self.flag:
 			print("send CC")	
 			self.send_CC()
-			time.sleep(60)
+			time.sleep(30)
 
 	def send_FR(self):
 		print("Send FR")
@@ -127,12 +136,12 @@ class Node:
 				self.rm_Vizinho(addr)
 				inflag = False
 			elif(data[0] == 0):
-				print("receive Hello from {}:".format(addr))
-				mesg = Packet.decode_HELLO(data)
+				print("receive FR from {}:".format(addr))
+				mesg = Packet.decode_FR(data)
 				if self.mode == "server":
 					self.send_CC()
 				elif self.mode == "client":
-					self.send_HELLO()
+					self.send_FR()
 
 			elif (data[0] == 1):
 				print("receive CC from {}:".format(addr))
@@ -181,7 +190,7 @@ class Node:
 		if self.mode == "server":
 			self.send_CC()
 		elif self.mode == "client":
-			self.send_HELLO()
+			self.send_FR()
 
 	def status(self):
 		print("Vizinhos Ativos:",self.vizinhos.keys())
