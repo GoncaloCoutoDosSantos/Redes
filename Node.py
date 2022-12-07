@@ -213,7 +213,7 @@ class Node:
 
 	def off(self):
 		for i in self.vizinhos:
-			i.close()
+			self.vizinhos[i].close()
 
 	def on(self):
 		for i in self.vizinhos_all:
