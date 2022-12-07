@@ -48,7 +48,7 @@ class Node:
 
 	def listener(self):
 		self.s = socket.socket()
-		self.s.bind(("",port))
+		self.s.bind("",self.port)
 
 		#listen for new connections
 		self.s.listen(5)
