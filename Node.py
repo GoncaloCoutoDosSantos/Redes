@@ -6,7 +6,7 @@ import time
 
 class Node:
 	top = {}
-	def __init__(self,vizinhos,mode,port = 12457):
+	def __init__(self,vizinhos,mode,port = 12459):
 		self.mode = mode
 		print("Mode:",self.mode)
 		self.flag = True
@@ -161,10 +161,14 @@ class Node:
 				print("Endereço destino: {}".format(addrDest)) 
 				#Verifica se já tem a stream
 				hasStream = False
+				if self.mode=="server":
+					print("Stream sent")
+					return
 				for (server,entrada,saida) in self.streams: 
 					if(server==addrDest): #Se tiver a stream vai começar a enviar
 						saida = saida + [addr]
 						hasStream = True
+						print("Stream sent")
 						break
 				if(not hasStream): #Se não possuir a stream
 					vizinho = self.table.bestVizinho(addrDest)
@@ -173,6 +177,7 @@ class Node:
 					else: #Caso contrário vai pedir ao nodo mais rapido
 						self.SAConfirmations = self.SAConfirmations + [(addr,addrDest)]
 						self.send_SA(addrDest)
+						print("Esperar resposta")
 						#Esperar por resposta??
 			elif (data[0] == 3): #TODO test
 				print("receive SBYE from {}:".format(addr))
