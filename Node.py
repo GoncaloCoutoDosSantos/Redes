@@ -48,7 +48,6 @@ class Node:
 		#listen for new connections
 		self.s.listen(5)
 
-		threading.Thread(target=self.nodeInterface,args=()).start()
 		
 		if(self.mode!='server'): #TODO tirar daqui Se nao for servidor pedir stream
 			self.send_SA('Server')
@@ -69,6 +68,7 @@ class Node:
 					self.send_FR()
 
 				self.status()
+				self.nodeInterface()
 			else:
 				c.close()
 
