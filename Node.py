@@ -149,7 +149,7 @@ class Node:
 				print("Host: {} | TempoI: {} | Tempos: {}".format(host,tempoI,tempos)) 
 				if host != self.host:
 					t = time.time_ns()
-					diff_t = t - tempoI
+					diff_t = closet - tempoI
 					if(self.table.updateTempoHost(addr,host,diff_t,tempoI)):
 						self.send_flood(data,addr) 
 					else:
@@ -208,6 +208,23 @@ class Node:
 	def close(self):
 		pass
 		#self.s.close();
+
+	def off(self):
+		for i in self.vizinhos:
+			i.close()
+
+	def on(self):
+		for i in self.vizinhos_all:
+			s = socket.socket()
+			try:
+				s.connect((i,self.port))
+				self.vizinhos[i] = s
+				#self.top[self.host].append(i)
+				print("Vizinho Ativo:",i)
+				threading.Thread(target=self.recv,args=(s,i)).start()
+			except:
+				s.close()
+				print("node {} not active".format(i))
 
 
 parser = argparse.ArgumentParser()
