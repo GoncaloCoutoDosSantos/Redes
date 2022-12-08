@@ -2,9 +2,13 @@ import socket,time,threading
 from socket import AF_INET,SOCK_DGRAM,MSG_PEEK,timeout
 import logging
 import time
+from random import randint
 
 """
-Pacote - tipo | sequencia ??? | mensagem 
+Pacote - tipo | sequencia | mensagem 
+Tipos - \x00 = data
+        \x01 = Ack
+        \x03 = connection request
 """
 
 
@@ -18,10 +22,14 @@ class Connection:
 	socket = None #socket used to send messeges
 	addr = None #addr of the other socket
 	mode = ""
+	seq = randint(0,255)
+	last_seq = -1
+	lock = threading.Lock()
 
-	def __init__(self,mode = "control",socket = None,addr = None):
+	def __init__(self,mode = "control",socket = None,addr = None,last_seq = -1):
 		self.socket = socket
 		self.addr = addr
+		self.last_seq = last_seq
 
 		if(mode == "control"):
 			self.mode = mode 
@@ -38,7 +46,7 @@ class Connection:
 		self.socket = s
 		self.addr = addr
 
-		buffer,addr_recv = self.send(bytearray(12))
+		buffer,addr_recv = self.send(b'',b'\x03')
 
 		if(buffer == None):
 			s.close()
@@ -55,33 +63,43 @@ class Connection:
 	# in case that the send fail the funtion tries again 
 	# if alive is false return None
 	# return the (response,endereço do no que enviou) or None
-	def send(self,mesg):
+	def send(self,mesg,tipo=b'\x00'):
+
+		self.lock.acquire()
+
 		s = self.socket
 		addr = self.addr
 		flag = False #if already recv the message
 		buffer = None
 		addr_recv = None
 		tries = 0
-		s.settimeout(self.timeout)
+		seq = self.seq
+		seq_recv = 0
 
-		mesg = b'\x00' + mesg
+		mesg = tipo + seq.to_bytes(1,'big') + mesg
 
 		while (tries < self.max_tries and not flag) and self.alive:
 			s.sendto(mesg,addr)
 			try:
 				while not flag:
+					s.settimeout(self.timeout)
 					buffer,addr_recv = s.recvfrom(SIZE,MSG_PEEK)
 					logging.debug(":Conn:send Ack:{}".format(buffer))
 					if(buffer[0] == 1):
-						buffer,addr_recv = s.recvfrom(SIZE)
-						flag = not flag
+						seq_recv = int.from_bytes(buffer[1:2],"big")
+						if(seq_recv == seq):
+							buffer,addr_recv = s.recvfrom(SIZE)
+							flag = not flag
+							self.seq = (seq + 1) % 256
+						else:#limpa buffer se for um ack mas n corresponder a seq 
+							s.recvfrom(SIZE)
 					else:
 						time.sleep(0.01)
 			except timeout:
 				tries = tries + 1
 				logging.debug(":Conn:timeout tries: {}".format(tries))
-			#except Exception as e:
-				#print(e)
+
+		self.lock.release()
 
 		return buffer,addr_recv
 
@@ -91,21 +109,27 @@ class Connection:
 		s = self.socket.dup()
 		buffer = None
 		addr = None
+		last_seq = (self.last_seq + 1) % 256
 
 		try:
 			while(flag and self.alive):
 				s.settimeout(None) # sem timeout 
 				buffer,addr = s.recvfrom(size,MSG_PEEK)
-				logging.debug(":CONN:recv Ack:{}".format(buffer))
+				logging.debug(":Conn:recv Ack:{}".format(buffer))
 				if(buffer[0] == 0):
-					buffer,addr = s.recvfrom(size)
-					flag = not flag
-					s.sendto(b'\x01',addr)
-					buffer = buffer[1:]
+					seq_recv = int.from_bytes(buffer[1:2],"big")
+					if(last_seq == seq_recv or self.last_seq == -1):
+						buffer,addr = s.recvfrom(size)
+						flag = not flag
+						s.sendto(b'\x01' + buffer[1].to_bytes(1,'big'),addr)
+						buffer = buffer[2:]
+						self.last_seq = seq_recv
+					else:
+						s.recvfrom(size)
 				else:
 					time.sleep(0.01)
 		except Exception as e:
-			logging.warning(":CONN:",e)
+			logging.warning(":Conn:",e)
 
 		return buffer
 
@@ -117,8 +141,9 @@ class Connection:
 		while (flag):
 			s.settimeout(None)
 			buffer,addr = s.recvfrom(SIZE,MSG_PEEK)
-			if(buffer[0] == 0):
+			if(buffer[0] == 3):
 				buffer,addr = s.recvfrom(SIZE)
+				seq = buffer[1]
 				flag = not flag
 			else:
 				time.sleep(0.01)
@@ -126,9 +151,10 @@ class Connection:
 
 		ret_s = socket.socket(AF_INET,SOCK_DGRAM)
 		ret_s.bind(("",0))
-		ret_s.sendto(b'\x01',addr)
+		msg = b'\x01' + seq.to_bytes(1,'big')
+		ret_s.sendto(msg,addr)
 
-		return Connection(mode,ret_s,addr),addr
+		return Connection(mode,ret_s,addr,seq),addr
 
 	def close():
 		pass
