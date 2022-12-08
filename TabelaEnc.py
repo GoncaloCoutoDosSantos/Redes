@@ -2,18 +2,29 @@ import time
 from Packet import Packet
 import math
 import logging
+import threading 
 
 class TabelaEnc:
 	def __init__(self,vizinhos):
 		self.lastWorking = None 
 		self.dicionario = {}
 		self.hosts = []
+		self.lock = threading.RLock()
 		for vizinho in vizinhos:
 			self.dicionario[vizinho] = []
 
+	def lockLock(self):
+		print("lock acquire")
+		self.lock.acquire()
+
+	def unlockLock(self):
+		print("lock release")
+		self.lock.release()
 
 	def updateTempoHost(self,vizinho, host, timeTaken,timeInitial):
 		novaLista = []
+
+		self.lockLock()
 		if host not in self.hosts: self.hosts.append(host)
 		for (server,timeTakenOld,timeInitialOld) in self.dicionario[vizinho]:
 			if (server==host):
@@ -22,19 +33,27 @@ class TabelaEnc:
 			else: novaLista.append((server,timeTakenOld,timeInitialOld))
 		novaLista.append((host,timeTaken,timeInitial))
 		self.dicionario[vizinho] = novaLista
+
 		if (self.bestVizinho(host)==vizinho):
+			self.unlockLock()
 			return True
-		else: return False
+		else:
+			self.unlockLock()
+			return False
 
 
 	def bestVizinho(self,host):
 		bestTime = math.inf
 		bestVizinho = None
+
+		self.lockLock()
 		for vizinho in self.dicionario:
 			for (server,timeTaken,timeInitial) in self.dicionario[vizinho]:
 				if (server==host and bestTime>timeTaken):
 					bestTime=timeTaken
 					bestVizinho=vizinho
+		self.unlockLock()
+
 		return bestVizinho
 
 
@@ -46,27 +65,33 @@ class TabelaEnc:
 
 
 	def addVizinho(self,vizinho):
+		self.lockLock()
 		if vizinho not in self.dicionario:
 			self.dicionario[vizinho] = []
 		else:
 			print("add:Vizinho Repetido")
+		self.unlockLock()
 
 
-	def rmVizinho(self,vizinho): #todo ao remover verificar se não existem mais entradas para o servidor, caso aconteça enviar msg de erro
+	def rmVizinho(self,vizinho): #TODO ao remover verificar se não existem mais entradas para o servidor, caso aconteça enviar msg de erro
+		self.lockLock()
 		if vizinho in self.dicionario:
 			self.dicionario.pop(vizinho)
 		else:
 			print("rm:vizinho inexistente")
+		self.unlockLock()
 
 
 	def rmServerVizinho(self,serverDestino,vizinho): #Se retornar true então flood SBYE
+		self.lockLock()
 		if(self.bestVizinho(serverDestino)==None):
 			return False #Se o servidor já não existir não faz nada
 
 		tamanhoInicial = len(self.dicionario[vizinho])
 		self.dicionario[vizinho][:] = ((server,timeTakenOld,timeInitialOld) for (server,timeTakenOld,timeInitialOld) in self.dicionario[vizinho] if server!=serverDestino)
 		tamanhoFinal = self.dicionario[vizinho]
-		
+		self.unlockLock()
+
 		if(tamanhoInicial == len(tamanhoFinal)):
 			print("Tamanho inalterado")
 		elif(tamanhoFinal==0): 

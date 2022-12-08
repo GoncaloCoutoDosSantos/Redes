@@ -35,7 +35,7 @@ class Node:
 				logging.debug("Vizinho Ativo:".format(i))
 				threading.Thread(target=self.recv,args=(s,i)).start()
 			else:
-				s.close()
+				#s.close()
 				logging.debug("node {} not active".format(i))
 
 		self.table = TabelaEnc(self.vizinhos.keys())
@@ -53,9 +53,6 @@ class Node:
 		self.s = socket.socket(AF_INET,SOCK_DGRAM)
 		self.s.bind(("",self.port))
 
-		
-		if(self.mode!='server'): #TODO tirar daqui Se nao for servidor pedir stream
-			self.send_SA('Server')
 		while self.flag:
 			c, addr = Connection.listen(self.s)
 			logging.info('Got connection from {}'.format(addr))
@@ -64,9 +61,6 @@ class Node:
 				self.vizinhos[addr[0]] = c
 				self.table.addVizinho(addr[0])
 				threading.Thread(target=self.recv,args=(c,addr[0])).start()
-
-				if(self.mode!='server'): #TODO tirar daqui Se nao for servidor pedir stream
-					self.send_SA('Server')
 				if self.mode=="server":
 					self.send_CC()
 				elif self.mode=="client":
@@ -167,22 +161,21 @@ class Node:
 				hasStream = False
 				if self.mode=="server":
 					logging.debug("Stream sent")
-					return
-				for (server,entrada,saida) in self.streams: 
-					if(server==addrDest): #Se tiver a stream vai começar a enviar
-						saida = saida + [addr]
-						hasStream = True
-						logging.debug("Stream sent")
-						break
-				if(not hasStream): #Se não possuir a stream
-					vizinho = self.table.bestVizinho(addrDest)
-					if(vizinho==None): #Caso não haja caminho para a stream flood SBYE TODO atenção a este caso porque deve ser só redondante
-						self.send_SBYE(addrDest)
-					else: #Caso contrário vai pedir ao nodo mais rapido
-						self.SAConfirmations = self.SAConfirmations + [(addr,addrDest)]
-						self.send_SA(addrDest)
-						logging.debug("Esperar resposta")
-						#Esperar por resposta??
+				else:
+					for (server,entrada,saida) in self.streams: 
+						if(server==addrDest): #Se tiver a stream vai começar a enviar
+							saida = saida + [addr]
+							hasStream = True
+							print("Stream sent")
+					if(not hasStream): #Se não possuir a stream
+						vizinho = self.table.bestVizinho(addrDest)
+						if(vizinho==None): #Caso não haja caminho para a stream flood SBYE TODO atenção a este caso porque deve ser só redondante
+							self.send_SBYE(addrDest)
+						else: #Caso contrário vai pedir ao nodo mais rapido
+							self.SAConfirmations = self.SAConfirmations + [(addr,addrDest)]
+							self.send_SA(addrDest)
+							print("Esperar resposta")
+							#Esperar por resposta??
 
 			elif (data[0] == 3): #TODO test
 				logging.info("receive SBYE from {}:".format(addr))
@@ -222,7 +215,8 @@ class Node:
 			if(comando=="off"):
 				self.off()
 				self.flag = not self.flag
-
+			elif(comando=="sa" and self.mode!='server'):
+				self.send_SA('Server')
 
 if __name__ == '__main__':
 	logging.basicConfig(format='%(message)s',level=logging.DEBUG)#(format='%(levelname)s:%(message)s',level=logging.DEBUG)
