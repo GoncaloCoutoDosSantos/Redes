@@ -1,6 +1,7 @@
 import socket,time,threading
 from socket import AF_INET,SOCK_DGRAM,MSG_PEEK,timeout
 import logging
+import time
 
 """
 Pacote - tipo | sequencia ??? | mensagem 
@@ -74,6 +75,8 @@ class Connection:
 					if(buffer[0] == 1):
 						buffer,addr_recv = s.recvfrom(SIZE)
 						flag = not flag
+					else:
+						time.sleep(0.01)
 			except timeout:
 				tries = tries + 1
 				logging.debug(":Conn:timeout tries: {}".format(tries))
@@ -85,7 +88,7 @@ class Connection:
 	# function that recive mesg for the server
 	def recv(self,size=SIZE):
 		flag = True
-		s = self.socket
+		s = self.socket.dup()
 		buffer = None
 		addr = None
 
@@ -99,6 +102,8 @@ class Connection:
 					flag = not flag
 					s.sendto(b'\x01',addr)
 					buffer = buffer[1:]
+				else:
+					time.sleep(0.01)
 		except Exception as e:
 			logging.warning(":CONN:",e)
 
@@ -107,9 +112,18 @@ class Connection:
 	# funtion used to listen to new connections
 	# return a new connection
 	def listen(s,mode = "control"):
+		flag = True
 
-		s.settimeout(None)
-		buffer,addr = s.recvfrom(SIZE)
+		while (flag):
+			s.settimeout(None)
+			buffer,addr = s.recvfrom(SIZE,MSG_PEEK)
+			if(buffer[0] == 0):
+				buffer,addr = s.recvfrom(SIZE)
+				flag = not flag
+			else:
+				time.sleep(0.01)
+
+
 		ret_s = socket.socket(AF_INET,SOCK_DGRAM)
 		ret_s.bind(("",0))
 		ret_s.sendto(b'\x01',addr)
