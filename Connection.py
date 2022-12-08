@@ -1,5 +1,5 @@
 import socket,time,threading
-from socket import AF_INET,SOCK_DGRAM,MSG_PEEK
+from socket import AF_INET,SOCK_DGRAM,MSG_PEEK,timeout
 import logging
 
 """
@@ -74,9 +74,11 @@ class Connection:
 					if(buffer[0] == 1):
 						buffer,addr_recv = s.recvfrom(SIZE)
 						flag = not flag
-			except TimeoutError:
+			except timeout:
 				tries = tries + 1
 				logging.debug(":Conn:timeout tries: {}".format(tries))
+			#except Exception as e:
+				#print(e)
 
 		return buffer,addr_recv
 
