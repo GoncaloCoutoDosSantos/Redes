@@ -1,6 +1,7 @@
 import time 
 from Packet import Packet
 import math
+import logging
 
 class TabelaEnc:
 	def __init__(self,vizinhos):
@@ -77,10 +78,10 @@ class TabelaEnc:
 
 
 	def print(self):
-		print("Tabela de encaminhamento")
+		logging.debug("Tabela de encaminhamento")
 		for i in self.hosts:
 			v = self.bestVizinho(i)
-			print("Servidor {}: {} custo {}".format(i,v,self.dicionario[v]))
+			logging.debug("Servidor {}: {} custo {}".format(i,v,self.dicionario[v]))
 
 
 if __name__ == '__main__':
