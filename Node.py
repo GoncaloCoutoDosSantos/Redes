@@ -28,17 +28,18 @@ class Node:
 
 
 		#tenta ligar se aos vizinhos(ve os que estao ativos)
+		self.table = TabelaEnc([])
 		for i in vizinhos:
 			s = Connection()
 			if s.connect((i,self.port)):
 				self.vizinhos[i] = s
 				logging.debug("Vizinho Ativo:".format(i))
+				self.table.addVizinho(i)
 				threading.Thread(target=self.recv,args=(s,i)).start()
 			else:
 				#s.close()
 				logging.debug("node {} not active".format(i))
 
-		self.table = TabelaEnc(self.vizinhos.keys())
 
 		#self.send_LSA()
 		if self.mode=="server":
@@ -82,8 +83,13 @@ class Node:
 	def send_CC(self):
 		logging.debug("Send CC")
 		packet = Packet.encode_CC(self.host,time.time_ns())
+		jobs = []
 		for i in self.vizinhos:
-			self.send(i,packet)
+			jobs.append(threading.Thread(target=self.send,args=(i,packet)))
+		
+		for job in jobs:
+			job.start()
+
 
 	def send_CC_thread(self):
 		while self.flag:	
@@ -156,17 +162,17 @@ class Node:
 			elif (data[0] == 2): #TODO test SA
 				logging.info("receive SA from {}:".format(addr))
 				addrDest = Packet.decode_SA(data)
-				logging.debug("Endereço destino: {}".format(addrDest)) 
+				logging.info("Endereço destino: {}".format(addrDest)) 
 				#Verifica se já tem a stream
 				hasStream = False
 				if self.mode=="server":
-					logging.debug("Stream sent")
+					logging.info("Stream sent")
 				else:
 					for (server,entrada,saida) in self.streams: 
 						if(server==addrDest): #Se tiver a stream vai começar a enviar
 							saida = saida + [addr]
 							hasStream = True
-							print("Stream sent")
+							logging.info("Stream sent")
 					if(not hasStream): #Se não possuir a stream
 						vizinho = self.table.bestVizinho(addrDest)
 						if(vizinho==None): #Caso não haja caminho para a stream flood SBYE TODO atenção a este caso porque deve ser só redondante
@@ -174,7 +180,7 @@ class Node:
 						else: #Caso contrário vai pedir ao nodo mais rapido
 							self.SAConfirmations = self.SAConfirmations + [(addr,addrDest)]
 							self.send_SA(addrDest)
-							print("Esperar resposta")
+							logging.info("Esperar resposta")
 							#Esperar por resposta??
 
 			elif (data[0] == 3): #TODO test

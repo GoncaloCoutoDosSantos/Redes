@@ -14,11 +14,9 @@ class TabelaEnc:
 			self.dicionario[vizinho] = []
 
 	def lockLock(self):
-		print("lock acquire")
 		self.lock.acquire()
 
 	def unlockLock(self):
-		print("lock release")
 		self.lock.release()
 
 	def updateTempoHost(self,vizinho, host, timeTaken,timeInitial):
@@ -104,9 +102,12 @@ class TabelaEnc:
 
 	def print(self):
 		logging.debug("Tabela de encaminhamento")
+		logging.debug("{}".format(self.dicionario))
+		"""
 		for i in self.hosts:
 			v = self.bestVizinho(i)
 			logging.debug("Servidor {}: {} custo {}".format(i,v,self.dicionario[v]))
+		"""
 
 
 if __name__ == '__main__':
