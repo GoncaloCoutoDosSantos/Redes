@@ -19,17 +19,17 @@ class TabelaEnc:
 	def unlockLock(self):
 		self.lock.release()
 
-	def updateTempoHost(self,vizinho, host, timeTaken,timeInitial):
+	def updateTempoHost(self,vizinho, host,ip, timeTaken,timeInitial):
+		print("updateTempoHost IP:",ip)
 		novaLista = []
-
 		self.lockLock()
 		if host not in self.hosts: self.hosts.append(host)
-		for (server,timeTakenOld,timeInitialOld) in self.dicionario[vizinho]:
+		for (server,oldIp,timeTakenOld,timeInitialOld) in self.dicionario[vizinho]:
 			if (server==host):
 				if(timeInitial<=timeInitialOld): # se a mensagem for mais velha deita fora
 					return False
-			else: novaLista.append((server,timeTakenOld,timeInitialOld))
-		novaLista.append((host,timeTaken,timeInitial))
+			else: novaLista.append((server,oldIp,timeTakenOld,timeInitialOld))
+		novaLista.append((host,ip,timeTaken,timeInitial))
 		self.dicionario[vizinho] = novaLista
 
 		if (self.bestVizinho(host)==vizinho):
@@ -46,7 +46,7 @@ class TabelaEnc:
 
 		self.lockLock()
 		for vizinho in self.dicionario:
-			for (server,timeTaken,timeInitial) in self.dicionario[vizinho]:
+			for (server,ip,timeTaken,timeInitial) in self.dicionario[vizinho]:
 				if (server==host and bestTime>timeTaken):
 					bestTime=timeTaken
 					bestVizinho=vizinho
@@ -56,10 +56,10 @@ class TabelaEnc:
 
 
 	def recievePacket(self,vizinho,packet):
-		(host,tempoI,tempos) = Packet.decode_CC(packet)   #todo update tempos
+		(host,ip,tempoI,tempos) = Packet.decode_CC(packet)   #todo update tempos
 		timeTaken = time.time_ns()-tempoI
-
-		return self.updateTempoHost(vizinho,host,timeTaken,tempoI)  #retorna true se for para dar flood
+		print("recievePacket IP:",ip)
+		return self.updateTempoHost(vizinho,host,ip,timeTaken,tempoI)  #retorna true se for para dar flood
 
 
 	def addVizinho(self,vizinho):
@@ -86,7 +86,7 @@ class TabelaEnc:
 			return False #Se o servidor já não existir não faz nada
 
 		tamanhoInicial = len(self.dicionario[vizinho])
-		self.dicionario[vizinho][:] = ((server,timeTakenOld,timeInitialOld) for (server,timeTakenOld,timeInitialOld) in self.dicionario[vizinho] if server!=serverDestino)
+		self.dicionario[vizinho][:] = ((server,ip,timeTakenOld,timeInitialOld) for (server,ip,timeTakenOld,timeInitialOld) in self.dicionario[vizinho] if server!=serverDestino)
 		tamanhoFinal = self.dicionario[vizinho]
 		self.unlockLock()
 
@@ -116,15 +116,15 @@ if __name__ == '__main__':
 	time.sleep(0.5)
 	tempoInicial2 = time.time_ns()
 
-	packet1 = Packet.encode_CC('127.5.2.2',tempoInicial1, [])
-	packet2 = Packet.encode_CC('127.5.2.2',tempoInicial2, [])
-	packet3 = Packet.encode_CC('127.2.8.4',tempoInicial1, [])
+	packet1 = Packet.encode_CC("Server",'127.5.2.2',tempoInicial1, [])
+	packet2 = Packet.encode_CC("Server",'127.5.2.2',tempoInicial2, [])
+	packet3 = Packet.encode_CC("Server",'127.2.8.4',tempoInicial1, [])
 
 	print(tabela.recievePacket('127.0.0.1',packet1))
 	time.sleep(0.5)
 	print(tabela.recievePacket('127.0.0.2',packet1))
 	print(tabela.bestVizinho('127.5.2.2'))
-
+	tabela.print()
 	print(tabela.recievePacket('127.0.0.2',packet3))
 	tabela.rmServerVizinho('127.5.2.2','127.0.0.2')
 	print("yo")

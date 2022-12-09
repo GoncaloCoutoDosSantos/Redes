@@ -37,14 +37,21 @@ class Packet:
 	def decode_FR(packet): #Flood request
 		return packet[0]
 
-	def encode_CC(addr,tempoI,tempos = []):
-		array = bytearray(1 + 1 + len(addr))
+	def encode_CC(name,ip,tempoI,tempos = []):
+		array = bytearray(1 + 1 + len(name)+ 1 + len(ip))
 		array[0] = int(1)
-		array[1] = len(addr)
+		array[1] = len(name)
 		ind = 2
-		for i in addr: #Put IP host
+		for i in name: #Put IP host
 			array[ind] = ord(i)
 			ind += 1
+
+		array[ind]= len(ip)
+		ind += 1
+		for i in ip:
+			array[ind] = ord(i)
+			ind += 1
+
 		tempoByteA = tempoI.to_bytes(10,'big')
 		tamanho = len(tempos).to_bytes(4,'big')
 		temposByteA = []
@@ -56,8 +63,12 @@ class Packet:
 		#print(packet)
 		#print("Receive CC packet")
 		length = packet[1]
-		host = packet[2:2+length].decode("utf-8") #Ip do router original
+		host = packet[2:2+length].decode("utf-8") #Nome do servidor original
 		ind = 2+length
+		length = packet[ind]
+		ind += 1
+		ip= packet[ind:ind+length].decode("utf-8") #Ip do router original
+		ind+= length
 		tempoI = int.from_bytes(packet[ind:ind+10],'big')
 		tempos = []
 		ind = ind + 10
@@ -66,7 +77,7 @@ class Packet:
 		for i in range(length): 
 			tempos.append(int.from_bytes(packet[ind:ind+10],'big'))
 			ind += 10
-		return (host,tempoI,tempos)
+		return (host,ip,tempoI,tempos)
 
 	def encode_SA(addr): #Stream ASK
 		array = bytearray(1 + 1 + len(addr))
@@ -104,12 +115,14 @@ if __name__ == '__main__':
 	vizinhos["10.0.0.21"] = "ola"
 	vizinhos["10.0.1.20"] = "ola"
 
-	pacote = Packet.encode_SA("bronze")
-	origem = Packet.decode_SA(pacote)
-	print("Origem:"+origem)
+	#pacote = Packet.encode_SA("bronze")
+	#origem = Packet.decode_SA(pacote)
+	#print("Origem:"+origem)
 	#t = time.time_ns()
 	#print(t)
-	#packet = Packet.encode_CC("Setefi",t)
+	packet = Packet.encode_CC("Setefi",'127.0.0.1',123)
+	(name,ip,tempoI,tempos) = Packet.decode_CC(packet)
+	print("yo")
 	#print(packet)
 	#print(Packet.decode_CC(packet))
 
