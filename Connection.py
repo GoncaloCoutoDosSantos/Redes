@@ -24,12 +24,12 @@ class Connection:
 	mode = ""
 	seq = randint(0,255)
 	last_seq = -1
-	lock = threading.Lock()
 
 	def __init__(self,mode = "control",socket = None,addr = None,last_seq = -1):
 		self.socket = socket
 		self.addr = addr
 		self.last_seq = last_seq
+		self.lock = threading.Lock()
 
 		if(mode == "control"):
 			self.mode = mode 
@@ -57,6 +57,53 @@ class Connection:
 			self.addr = addr_recv
 
 		return self.alive
+
+
+	#function that first recv the information in the socket 
+	#recv the type of mesg that is looking for 
+	#check if anything can go to trash 
+	def recv_buffer(self,target,socket):
+		flag = True #flag that says is recv the right tipy of package
+		s = socket
+		buffer = None
+		addr_recv = None
+
+		try:
+			while flag and self.alive:
+				buffer,addr_recv = s.recvfrom(SIZE,MSG_PEEK)
+				logging.debug(":Conn:recv:{}".format(buffer))
+				tipo = buffer[0]
+
+				if (tipo == 0): #recebeu data 
+					last_seq = (self.last_seq + 1) % 256
+					seq_recv = int.from_bytes(buffer[1:2],"big")
+					if(last_seq != seq_recv and self.last_seq != -1):
+						s.recvfrom(SIZE)
+						logging.debug(":Conn:data rejeitado")
+					elif(target == tipo):
+						self.last_seq = seq_recv 
+						buffer,addr_recv = s.recvfrom(SIZE)
+						flag = not flag
+
+				elif (tipo == 1): # recebeu ack
+					seq = self.seq
+					seq_recv = int.from_bytes(buffer[1:2],"big")
+					if(seq != seq_recv):
+						s.recvfrom(SIZE)
+						logging.debug(":Conn:ack rejeitado")
+					elif(target == tipo):
+						buffer,addr_recv = s.recvfrom(SIZE)
+						flag = not flag					
+				else:
+					logging.warning(":Conn: PACKET NOT IDENTIFED {}:{}".format(tipo,buffer))
+			
+			return buffer,addr_recv
+		
+		except Exception as e:
+			raise e
+
+
+
 		
 
 	# funtion that send a message and confirm reception by receiving an ack 
@@ -81,20 +128,11 @@ class Connection:
 		while (tries < self.max_tries and not flag) and self.alive:
 			s.sendto(mesg,addr)
 			try:
-				while not flag:
-					s.settimeout(self.timeout)
-					buffer,addr_recv = s.recvfrom(SIZE,MSG_PEEK)
-					logging.debug(":Conn:send Ack:{}".format(buffer))
-					if(buffer[0] == 1):
-						seq_recv = int.from_bytes(buffer[1:2],"big")
-						if(seq_recv == seq):
-							buffer,addr_recv = s.recvfrom(SIZE)
-							flag = not flag
-							self.seq = (seq + 1) % 256
-						else:#limpa buffer se for um ack mas n corresponder a seq 
-							s.recvfrom(SIZE)
-					else:
-						time.sleep(0.01)
+				s.settimeout(self.timeout)
+				buffer,addr_recv = self.recv_buffer(1,s)
+				logging.debug(":Conn:Recv Ack:{}".format(buffer))
+				flag = not flag
+				self.seq = (seq + 1) % 256
 			except timeout:
 				tries = tries + 1
 				logging.debug(":Conn:timeout tries: {}".format(tries))
@@ -109,25 +147,14 @@ class Connection:
 		s = self.socket.dup()
 		buffer = None
 		addr = None
-		last_seq = (self.last_seq + 1) % 256
 
 		try:
-			while(flag and self.alive):
-				s.settimeout(None) # sem timeout 
-				buffer,addr = s.recvfrom(size,MSG_PEEK)
-				logging.debug(":Conn:recv Ack:{}".format(buffer))
-				if(buffer[0] == 0):
-					seq_recv = int.from_bytes(buffer[1:2],"big")
-					if(last_seq == seq_recv or self.last_seq == -1):
-						buffer,addr = s.recvfrom(size)
-						flag = not flag
-						s.sendto(b'\x01' + buffer[1].to_bytes(1,'big'),addr)
-						buffer = buffer[2:]
-						self.last_seq = seq_recv
-					else:
-						s.recvfrom(size)
-				else:
-					time.sleep(0.01)
+			s.settimeout(None) # sem timeout 
+			buffer,addr = self.recv_buffer(0,s)
+			s.sendto(b'\x01' + buffer[1].to_bytes(1,'big'),addr)
+			buffer = buffer[2:]
+			logging.debug(":Conn:recv Data:{}".format(buffer))
+	
 		except Exception as e:
 			logging.warning(":Conn:",e)
 
@@ -156,8 +183,8 @@ class Connection:
 
 		return Connection(mode,ret_s,addr,seq),addr
 
+
 	def close():
 		pass
 
-
-
+			
