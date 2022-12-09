@@ -137,6 +137,7 @@ class Node:
 			self.rm_Vizinho(i)
 			if(self.mode!='server'):
 				#TODO mandar mensagem direta ao servidor
+				print("Envia FR direto ao servidor")
 			return False
 
 
