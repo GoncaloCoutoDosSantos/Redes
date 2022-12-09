@@ -12,24 +12,23 @@ Tipos - \x00 = data
 """
 
 
-
+TIMEOUT = 0.5
 SIZE = 1024 #tamanha maximo dos pacotes
 
 class Connection:
 	timeout = 0.5 #definition of timeout in seconds
 	max_tries = 5 #number of max tries to do a connection
-	alive = True #bollean that says if connection is active
-	socket = None #socket used to send messeges
-	addr = None #addr of the other socket
-	mode = ""
-	seq = randint(0,255)
-	last_seq = -1
+
 
 	def __init__(self,mode = "control",socket = None,addr = None,last_seq = -1):
-		self.socket = socket
-		self.addr = addr
+		self.socket = socket #socket used to send messeges
+		self.addr = addr #addr of the other socket
 		self.last_seq = last_seq
 		self.lock = threading.Lock()
+		self.lock_read = threading.Lock()
+		self.seq = randint(0,255)
+		self.last_seq = -1
+		self.alive = True #bollean that says if connection is active
 
 		if(mode == "control"):
 			self.mode = mode 
@@ -62,14 +61,18 @@ class Connection:
 	#function that first recv the information in the socket 
 	#recv the type of mesg that is looking for 
 	#check if anything can go to trash 
-	def recv_buffer(self,target,socket):
+	def recv_buffer(self,target,timeout = TIMEOUT):
 		flag = True #flag that says is recv the right tipy of package
-		s = socket
+		s = self.socket
 		buffer = None
 		addr_recv = None
 
 		try:
 			while flag and self.alive:
+
+				self.lock_read.acquire()
+
+				s.settimeout(timeout)
 				buffer,addr_recv = s.recvfrom(SIZE,MSG_PEEK)
 				logging.debug(":Conn:recv:{}".format(buffer))
 				tipo = buffer[0]
@@ -79,7 +82,7 @@ class Connection:
 					seq_recv = int.from_bytes(buffer[1:2],"big")
 					if(last_seq != seq_recv and self.last_seq != -1):
 						s.recvfrom(SIZE)
-						logging.debug(":Conn:data rejeitado")
+						logging.debug(":Conn:data rejeitado: Esperado:{} recebido:{}".format(last_seq,seq_recv))
 					elif(target == tipo):
 						self.last_seq = seq_recv 
 						buffer,addr_recv = s.recvfrom(SIZE)
@@ -96,10 +99,13 @@ class Connection:
 						flag = not flag					
 				else:
 					logging.warning(":Conn: PACKET NOT IDENTIFED {}:{}".format(tipo,buffer))
+
+				self.lock_read.release()
 			
 			return buffer,addr_recv
 		
 		except Exception as e:
+			self.lock_read.release()
 			raise e
 
 
@@ -128,8 +134,7 @@ class Connection:
 		while (tries < self.max_tries and not flag) and self.alive:
 			s.sendto(mesg,addr)
 			try:
-				s.settimeout(self.timeout)
-				buffer,addr_recv = self.recv_buffer(1,s)
+				buffer,addr_recv = self.recv_buffer(1)
 				logging.debug(":Conn:Recv Ack:{}".format(buffer))
 				flag = not flag
 				self.seq = (seq + 1) % 256
@@ -144,19 +149,19 @@ class Connection:
 	# function that recive mesg for the server
 	def recv(self,size=SIZE):
 		flag = True
-		s = self.socket.dup()
+		s = self.socket
 		buffer = None
 		addr = None
 
 		try:
-			s.settimeout(None) # sem timeout 
-			buffer,addr = self.recv_buffer(0,s)
+			buffer,addr = self.recv_buffer(0,None)
 			s.sendto(b'\x01' + buffer[1].to_bytes(1,'big'),addr)
 			buffer = buffer[2:]
 			logging.debug(":Conn:recv Data:{}".format(buffer))
+			flag = not flag
 	
 		except Exception as e:
-			logging.warning(":Conn:",e)
+			logging.warning(":Conn: {}".format(e))
 
 		return buffer
 
