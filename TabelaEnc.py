@@ -6,7 +6,6 @@ import threading
 
 class TabelaEnc:
 	def __init__(self,vizinhos):
-		self.lastWorking = None 
 		self.dicionario = {}
 		self.hosts = []
 		self.lock = threading.RLock()
@@ -19,47 +18,64 @@ class TabelaEnc:
 	def unlockLock(self):
 		self.lock.release()
 
-	def updateTempoHost(self,vizinho, host,ip, timeTaken,timeInitial):
-		print("updateTempoHost IP:",ip)
-		novaLista = []
-		self.lockLock()
-		if host not in self.hosts: self.hosts.append(host)
-		for (server,oldIp,timeTakenOld,timeInitialOld) in self.dicionario[vizinho]:
-			if (server==host):
-				if(timeInitial<=timeInitialOld): # se a mensagem for mais velha deita fora
-					return False
-			else: novaLista.append((server,oldIp,timeTakenOld,timeInitialOld))
-		novaLista.append((host,ip,timeTaken,timeInitial))
-		self.dicionario[vizinho] = novaLista
 
-		if (self.bestVizinho(host)==vizinho):
-			self.unlockLock()
+
+	# -------------------------------------------------------------------------------------------------------------------------------------------
+	# Resumo: Atualiza a tabela de encaminhamento conforme os dados da mensagem CC
+	# 	A entrada para o servidor pelo vizinho é atualizada/adicionada caso:
+	#		 -O servidor não esteja presente na lista de servidores do vizinho (caso 1)
+	#		 -A mensagem CC recebida for mais recente do que a presente na entrada já presente (caso 2)
+	# 	Caso o servidor não esteja presente na lista de hosts então vai ser adicionado
+	#   É devolvido True se for necessario dar flood á mensagem CC caso contrário é devolvido False
+	# 	o flood é necessário caso o vizinho (que enviou transmitiu o CC) seja o mais rápido para o servidor adicionado
+	def __updateTempoHost(self,vizinho, host,ip, timeTaken,timeInitial):
+		novaLista = [] #Criar uma nova lista que vai repor a antiga
+
+		self.lockLock()
+		if host not in self.hosts: self.hosts.append(host) #Se o servidor não pertencer á lista de hosts então é adicionado
+
+		for (server,oldIp,timeTakenOld,timeInitialOld) in self.dicionario[vizinho]: #iterar todos servidores do vizinho
+			if (server==host): #Se o servidor estiver presente na lista de servidores
+				if(timeInitial<=timeInitialOld): # caso a mensagem seja mais antiga ignora
+					return False
+				#Se a mensagem for mais nova, o servidor vai ser atualizar a entrada
+			else: novaLista.append((server,oldIp,timeTakenOld,timeInitialOld)) #Adiciona o servidor já existente há nova lista (sem alterações)
+
+		novaLista.append((host,ip,timeTaken,timeInitial)) #Adiciona/atualiza nova entrada do servidor á lista
+		self.dicionario[vizinho] = novaLista #Atualiza a lista de servidores do vizinho
+
+		bestVizinho = self.bestVizinho(host) #Calcula melhor vizinho para o servidor
+		self.unlockLock()
+
+		if (bestVizinho==vizinho): #Caso este vizinho seja o mais rápido então flood de CC
 			return True
 		else:
-			self.unlockLock()
 			return False
 
+	# -------------------------------------------------------------------------------------------------------------------------------------------
+	# Resumo: Atualiza a tabela de encaminhamento conforme o pacote CC
+	#   É devolvido True se for necessario dar flood á mensagem CC caso contrário é devolvido False
+	def recievePacket(self,vizinho,packet):
+		(host,ip,tempoI,tempos) = Packet.decode_CC(packet) #Descodificar pacote
+		timeTaken = time.time_ns()-tempoI	#Calcular o tempo que a mensagem demorou a chegar desde que o servidor a enviou
+		return self.__updateTempoHost(vizinho,host,ip,timeTaken,tempoI)  #retorna true se for para dar flood
 
+	# -------------------------------------------------------------------------------------------------------------------------------------------
+	# Resumo: Calcula o melhor vizinho para um dado host
+	#   Devolve o melhor vizinho
+	# 	Se não houver nenhum vizinho para o host devolve None
 	def bestVizinho(self,host):
 		bestTime = math.inf
 		bestVizinho = None
 
 		self.lockLock()
-		for vizinho in self.dicionario:
-			for (server,ip,timeTaken,timeInitial) in self.dicionario[vizinho]:
-				if (server==host and bestTime>timeTaken):
+		for vizinho in self.dicionario: #Iterar todos os vizinhos
+			for (server,ip,timeTaken,timeInitial) in self.dicionario[vizinho]: #Iterar todos os servidores de cada vizinho
+				if (server==host and bestTime>timeTaken): #Se o servidor do vizinho corresponder ao fornecido e seja o melhor até ao momento atualizar
 					bestTime=timeTaken
 					bestVizinho=vizinho
 		self.unlockLock()
-
 		return bestVizinho
-
-
-	def recievePacket(self,vizinho,packet):
-		(host,ip,tempoI,tempos) = Packet.decode_CC(packet)   #todo update tempos
-		timeTaken = time.time_ns()-tempoI
-		print("recievePacket IP:",ip)
-		return self.updateTempoHost(vizinho,host,ip,timeTaken,tempoI)  #retorna true se for para dar flood
 
 
 	def addVizinho(self,vizinho):
@@ -116,7 +132,7 @@ if __name__ == '__main__':
 	time.sleep(0.5)
 	tempoInicial2 = time.time_ns()
 
-	packet1 = Packet.encode_CC("Server",'127.5.2.2',tempoInicial1, [])
+	packet1 = Packet.encode_CC("ServerName",'IP ADDRESS',tempoInicial1, [])
 	packet2 = Packet.encode_CC("Server",'127.5.2.2',tempoInicial2, [])
 	packet3 = Packet.encode_CC("Server",'127.2.8.4',tempoInicial1, [])
 
