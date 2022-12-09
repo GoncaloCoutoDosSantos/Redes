@@ -73,12 +73,17 @@ class Node:
 
 	def send_SA(self,serverDestino):
 		vizinho = self.table.bestVizinho(serverDestino)
-		if(vizinho==None):
-			logging.debug("Não há caminho conhecido para o servidor no SA")
-		else:
-			logging.debug("Send SA")
-			packet = Packet.encode_SA(serverDestino)
-			self.send(vizinho,packet)
+
+		sent = False
+		while(not sent):
+			if(vizinho==None):
+				logging.debug("Não há caminho conhecido para o servidor no SA")
+				self.send_SBYE(serverDestino)
+				sent = True
+			else:
+				logging.debug("Send SA")
+				packet = Packet.encode_SA(serverDestino)
+				sent=self.send(vizinho,packet)
 
 	def send_CC(self):
 		logging.debug("Send CC")
@@ -124,10 +129,12 @@ class Node:
 				logging.info("didn't send mesg Flood to {}".format(i))
 
 	def send(self,i,packet):
-		try:
-			self.vizinhos[i].send(packet)
-		except:
+		(buffer,addr_recv) = self.vizinhos[i].send(packet)
+		if(buffer != None):
+			return True
+		else:
 			self.rm_Vizinho(i)
+			return False
 
 
 	def recv(self,s,addr):
