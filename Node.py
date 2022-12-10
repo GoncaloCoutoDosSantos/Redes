@@ -12,10 +12,11 @@ from ServerWorker import ServerWorker
 from RelayNode import RelayNode
 
 CC_TIME = 30
+IP_SERVER = '127.0.0.1'
 
 class Node:
 	top = {}
-	def __init__(self,vizinhos,mode,port = 12459):
+	def __init__(self,vizinhos,mode,port = 12460):
 		self.mode = mode
 		logging.info("Mode:{}".format(self.mode))
 		self.flag = True
@@ -82,7 +83,6 @@ class Node:
 		while(not sent):
 			if(vizinho==None):
 				logging.debug("Não há caminho conhecido para o servidor no SA")
-				self.send_SBYE(serverDestino)
 				sent = True
 			else:
 				logging.debug("Send SA")
@@ -91,12 +91,13 @@ class Node:
 
 	def send_CC(self):
 		logging.debug("Send CC")
-		packet = Packet.encode_CC(self.host,time.time_ns())
+		packet = Packet.encode_CC(self.host,IP_SERVER,time.time_ns(),[])
 		jobs = []
 		for i in self.vizinhos:
 			jobs.append(threading.Thread(target=self.send,args=(i,packet)))
 		
 		for job in jobs:
+			print("sup {}".format(time.time_ns()))
 			job.start()
 
 
@@ -138,6 +139,9 @@ class Node:
 			return True
 		else:
 			self.rm_Vizinho(i)
+			if(self.mode!='server'):
+				#TODO mandar mensagem direta ao servidor
+				print("Envia FR direto ao servidor")
 			return False
 
 	def recv(self,s,addr):
@@ -158,15 +162,10 @@ class Node:
 
 			elif (data[0] == 1): # CC
 				logging.info("receive CC from {}:".format(addr))
-				(host,tempoI,tempos) = Packet.decode_CC(data)
-				logging.debug("Host: {} | TempoI: {} | Tempos: {}".format(host,tempoI,tempos)) 
-				if host != self.host:
-					t = time.time_ns()
-					diff_t = t - tempoI
-					if(self.table.updateTempoHost(addr,host,diff_t,tempoI)):
-						self.send_flood(data,addr) 
-					else:
-						logging.debug("No flood")
+				if(self.table.recievePacket(addr,data)):
+					self.send_flood(data,addr) 
+				else:
+					logging.debug("No flood")
 				self.status()
 
 			elif (data[0] == 2): #TODO test SA
@@ -304,13 +303,15 @@ class Node:
 				threading.Thread(target=self.stream,args=())
 			elif(comando=="sa" and self.mode!='server'):
 				self.send_SA('Server')
+			elif(comando=="cc" and self.mode=='server'):
+				self.send_CC()
 
 if __name__ == '__main__':
 	logging.basicConfig(format='%(message)s',level=logging.DEBUG)#(format='%(levelname)s:%(message)s',level=logging.DEBUG)
 	parser = argparse.ArgumentParser()
 	parser.add_argument("vizinhos",nargs="*")
 	parser.add_argument("-m","--mode",choices=["server","client"],default="client")
-
+	
 	args = parser.parse_args()
 
 	t1 = Node(args.vizinhos,args.mode)
