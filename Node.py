@@ -6,6 +6,10 @@ import argparse
 import time
 import logging
 from Connection import Connection
+from tkinter import Tk
+from Client import Client
+from ServerWorker import ServerWorker
+from RelayNode import RelayNode
 
 CC_TIME = 30
 
@@ -136,7 +140,6 @@ class Node:
 			self.rm_Vizinho(i)
 			return False
 
-
 	def recv(self,s,addr):
 		inflag = True
 		while self.flag and inflag:
@@ -172,16 +175,31 @@ class Node:
 				logging.info("Endereço destino: {}".format(addrDest)) 
 				#Verifica se já tem a stream
 				hasStream = False
-				if self.mode=="server":
-					logging.info("Stream sent")
+
+				
+				if self.mode=="server":#inicializa serverworker
+					try:
+						SERVER_PORT = 4000
+					except:
+						print("Unocupied Server Port\n")
+					rtspSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+					rtspSocket.bind(('', SERVER_PORT))
+					rtspSocket.listen(5)        
+
+					# Receive client info (address,port) through RTSP/TCP session
+					clientInfo = {}
+					clientInfo['rtspSocket'] = rtspSocket.accept()
+					threading.Thread(target=ServerWorker(clientInfo).run(),args=())  
 				else:
-					for (server,entrada,saida) in self.streams: 
+					for (server,[entrada],saida,conteudo) in self.streams: #junta-se a outro stream
 						if(server==addrDest): #Se tiver a stream vai começar a enviar
+							# TODO arranjar maneira de juntar ao threading, acho q é inicializar a thread com variaveis self. que alterar quando precisas
 							saida = saida + [addr]
 							hasStream = True
 							logging.info("Stream sent")
 					if(not hasStream): #Se não possuir a stream
 						vizinho = self.table.bestVizinho(addrDest)
+						
 						if(vizinho==None): #Caso não haja caminho para a stream flood SBYE TODO atenção a este caso porque deve ser só redondante
 							self.send_SBYE(addrDest)
 						else: #Caso contrário vai pedir ao nodo mais rapido
@@ -189,14 +207,39 @@ class Node:
 							self.send_SA(addrDest)
 							logging.info("Esperar resposta")
 							#Esperar por resposta??
+							#Criar RelayNode
+							try:
+								OVERLAY_PORT = 4000
+							except:
+								print("Unocupied Server Port\n")
+							#Client side rtsp socket
+							rtspCSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+							rtspCSocket.bind(('', OVERLAY_PORT))
+							rtspCSocket.listen(5)     
+							#Server side rtsp socket
+							rtspSSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+							rtspSSocket.bind(('', OVERLAY_PORT+1))
+							rtspSSocket.listen(5)  
+							# Receive client info (address,port) through RTSP/TCP session
+
+							clientInfo = {}
+							clientInfo['rtspSocket'] = rtspCSocket.accept()
+							serverInfo = {}
+							serverInfo['rtspSocket'] = rtspSSocket.accept()
+							#TODO adicionar ao RelayNode outras informações na inicialização como nome do conteudo, endereços de entrada e saida ...
+							threading.Thread(target=RelayNode(clientInfo,serverInfo).run(),args=())
+							logging.info("Criado RelayNode")
+
 
 			elif (data[0] == 3): #TODO test
 				logging.info("receive SBYE from {}:".format(addr))
 				serverToRemove = Packet.decode_FR(data)
 				if(self.table.rmServerVizinho(serverToRemove,addr)): #rmServerVizinho deteta se é necessario enviar SBYE
 					self.send_SBYE(addrDest)
+
 			else:
 				logging.warning("Receive from {} data:{}".format(addr,data))
+
 		logging.info("Sai recv {}".format(addr))
 
 	def rm_Vizinho(self,addr):
@@ -220,6 +263,35 @@ class Node:
 			logging.info("Vizinho Desconectado: ",i)
 		self.s.close()
 
+	def stream(self):
+		#TODO aqui precisas de começar a mandar a primeira msg SA
+		print("Choose RtpPort(n tem safeguard):")
+		rtpPort = input()
+		hosts = self.table.getHosts
+		nextNode = False
+		'''
+		print("Choose Streaming Server:")
+		for i in hosts:
+			print("Server{}: {}",i,hosts[i])
+		while(not nextNode):
+			print("Input:")
+			choice = int(input())
+			if(choice >= 0 and choice<len(hosts)):
+				nextNodeAddr = self.table.bestVizinho(hosts[int(input())])
+				nextNode = True
+		'''
+		nextNodeAddr=self.table.bestVizinho(self.host)
+		print("Choose Streaming Port(n tem safeguard):")
+		
+		serverPort = input()
+
+		root = Tk()
+		fileName = "movie.Mjpeg"
+
+		# Create a new client
+		app = threading.Thread(target=Client(root, nextNodeAddr, serverPort, rtpPort, fileName),args=()) 
+		app.master.title("RTPClient")	
+		root.mainloop()
 
 	def nodeInterface(self):
 		while(self.flag):
@@ -228,6 +300,8 @@ class Node:
 			if(comando=="off"):
 				self.off()
 				self.flag = not self.flag
+			if(comando=="stream"):				
+				threading.Thread(target=self.stream,args=())
 			elif(comando=="sa" and self.mode!='server'):
 				self.send_SA('Server')
 
@@ -241,7 +315,6 @@ if __name__ == '__main__':
 
 	t1 = Node(args.vizinhos,args.mode)
 	t1.nodeInterface()
-
 
 
 

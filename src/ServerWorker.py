@@ -21,6 +21,7 @@ class ServerWorker:
 	
 	clientInfo = {}
 	
+	
 	def __init__(self, clientInfo):
 		self.clientInfo = clientInfo
 		

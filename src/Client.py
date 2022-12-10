@@ -1,5 +1,5 @@
 from tkinter import *
-import tkinter.messagebox
+import tkinter.messagebox as tkMessageBox
 from PIL import Image, ImageTk
 import socket, threading, sys, traceback, os
 
@@ -32,7 +32,7 @@ class Client:
 		self.sessionId = 0
 		self.requestSent = -1
 		self.teardownAcked = 0
-		self.connectToServer()
+		self.connectToNextNode()
 		self.frameNbr = 0
 		
 	def createWidgets(self):
@@ -132,7 +132,7 @@ class Client:
 		self.label.configure(image = photo, height=288) 
 		self.label.image = photo
 		
-	def connectToServer(self):
+	def connectToNextNode(self):
 		"""Connect to the Server. Start a new RTSP/TCP session."""
 		self.rtspSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		try:
@@ -142,62 +142,59 @@ class Client:
 	
 	def sendRtspRequest(self, requestCode):
 		"""Send RTSP request to the server."""	
-		#-------------
-		# TO COMPLETE
-		#-------------
 		
 		# Setup request
 		if requestCode == self.SETUP and self.state == self.INIT:
 			threading.Thread(target=self.recvRtspReply).start()
 			# Update RTSP sequence number.
-			# ...
+			self.rtspSeq += 1
 			
 			# Write the RTSP request to be sent.
-			# request = ...
+			request = "SETUP\n" + self.rtspSeq + "\n"
 			
 			# Keep track of the sent request.
-			# self.requestSent = ...
+			self.requestSent = request
 		
 		# Play request
 		elif requestCode == self.PLAY and self.state == self.READY:
 			# Update RTSP sequence number.
-			# ...
-		    print('\nPLAY event\n')
+			self.rtspSeq += 1
+			print('\nPLAY event\n')
 			
 			# Write the RTSP request to be sent.
-			# request = ...
+			request = "nPLAY\n" + self.rtspSeq + "\n"
 			
 			# Keep track of the sent request.
-			# self.requestSent = ...
+			self.requestSent = request
 		
 		# Pause request
 		elif requestCode == self.PAUSE and self.state == self.PLAYING:
 			# Update RTSP sequence number.
-			# ...
-		    print('\nPAUSE event\n')
+			self.rtspSeq += 1
+			print('\nPAUSE event\n')
 			
 			# Write the RTSP request to be sent.
-			# request = ...
+			request = "nPAUSE\n" + self.rtspSeq + "\n"
 			
 			# Keep track of the sent request.
-			# self.requestSent = ...
+			self.requestSent = request
 			
 		# Teardown request
 		elif requestCode == self.TEARDOWN and not self.state == self.INIT:
 			# Update RTSP sequence number.
-			# ...
-		    print('\nTEARDOWN event\n')
+			self.rtspSeq += 1
+			print('\nTEARDOWN event\n')
 			
 			# Write the RTSP request to be sent.
-			# request = ...
+			request = "nTEARDOWN\n" + self.rtspSeq + "\n"
 			
 			# Keep track of the sent request.
-			# self.requestSent = ...
+			self.requestSent = request
 		else:
 			return
 		
 		# Send the RTSP request using rtspSocket.
-		# ...
+		self.rtspSocket.send(request.encode())
 		
 		print('\nData sent:\n' + request)
 	
@@ -231,42 +228,36 @@ class Client:
 			if self.sessionId == session:
 				if int(lines[0].split(' ')[1]) == 200: 
 					if self.requestSent == self.SETUP:
-						#-------------
-						# TO COMPLETE
-						#-------------
 						# Update RTSP state.
-						# self.state = ...
-						
+						self.state = self.SETUP
 						# Open RTP port.
 						self.openRtpPort() 
+
 					elif self.requestSent == self.PLAY:
-						# self.state = ...
+						self.state = self.PLAY
 						print('\nPLAY sent\n')
+
 					elif self.requestSent == self.PAUSE:
-						# self.state = ...
-						
+						self.state = self.PAUSE
 						# The play thread exits. A new thread is created on resume.
 						self.playEvent.set()
+
 					elif self.requestSent == self.TEARDOWN:
-						# self.state = ...
-						
+						self.state = self.TEARDOWN
 						# Flag the teardownAcked to close the socket.
 						self.teardownAcked = 1 
 	
 	def openRtpPort(self):
 		"""Open RTP socket binded to a specified port."""
-		#-------------
-		# TO COMPLETE
-		#-------------
 		# Create a new datagram socket to receive RTP packets from the server
-		# self.rtpSocket = ...
+		self.rtpSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 		
 		# Set the timeout value of the socket to 0.5sec
-		# ...
+		self.rtpSocket.settimeout(0.5)
 		
 		try:
 			# Bind the socket to the address using the RTP port given by the client user
-			# ...
+			self.rtpSocket.bind("", self.rtpPort)
 			print('\nBind \n')
 		except:
 			tkMessageBox.showwarning('Unable to Bind', 'Unable to bind PORT=%d' %self.rtpPort)
