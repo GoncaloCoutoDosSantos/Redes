@@ -22,6 +22,7 @@ class StreamManager:
 		s.bind(("",self.port))
 
 		c, addr = Connection.listen(s)
+		s.close()
 		self.Recivingtream = c
 		threading.Thread(target=self.__recv,args=(c,addr)).start()
 
@@ -54,7 +55,7 @@ class StreamManager:
 			if(data == None):
 				self.running = False
 			elif(data[0] == 3): # STREAM PACKET
-				logging.info("receive Stream, from {}:".format(addr))
+				#logging.info("receive Stream, from {}:".format(addr))
 				self.sendAll(data)
 				if(self.interface!=None):
 					self.interface.send(Packet.decode_STREAM(data))

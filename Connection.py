@@ -173,6 +173,7 @@ class Connection:
 		while (flag):
 			s.settimeout(None)
 			buffer,addr = s.recvfrom(SIZE,MSG_PEEK)
+			print(buffer)
 			if(buffer[0] == 3):
 				buffer,addr = s.recvfrom(SIZE)
 				seq = buffer[1]

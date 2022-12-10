@@ -51,11 +51,6 @@ class Node:
 			threading.Thread(target=self.send_CC_thread,args=()).start()
 			threading.Thread(target=self.iniciaStreamManager,args=(self.host,'localhost')).start()
 			self.server = Server(FILENAME,PORTSTREAMS)
-			threading.Thread(target=self.iniciaClientView).start()
-			for stream in self.streams:
-				print("yooo1")
-				stream.addSendingStream('localhost',PORTCLIENTVIEW)
-				print("yooo2")
 
 		self.status()
 
@@ -230,11 +225,14 @@ class Node:
 				self.flag = not self.flag
 			if(comando=="stream"):				
 				threading.Thread(target=self.stream,args=())
-			elif(comando=="sa" and self.mode!='server'):
+			elif(comando=="sa" and self.mode=='client'):
 				self.send_SA('Server')
 			elif(comando=="cc" and self.mode=='server'):
 				self.send_CC()
-
+			elif(comando=="watch" and self.mode=='client'):
+				threading.Thread(target=self.iniciaClientView).start()
+				for stream in self.streams:
+					stream.addSendingStream('localhost',PORTCLIENTVIEW)
 
 if __name__ == '__main__':
 	logging.basicConfig(format='%(message)s',level=logging.DEBUG)#(format='%(levelname)s:%(message)s',level=logging.DEBUG)
