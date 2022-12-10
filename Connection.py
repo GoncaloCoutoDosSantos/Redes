@@ -13,7 +13,7 @@ Tipos - \x00 = data
 
 
 TIMEOUT = 0.5
-SIZE = 1024 #tamanha maximo dos pacotes
+SIZE = 20480#1024 #tamanha maximo dos pacotes
 
 class Connection:
 	timeout = 0.5 #definition of timeout in seconds
