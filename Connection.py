@@ -192,7 +192,8 @@ class Connection:
 	def getAddress(self):
 		return self.addr
 
-	def close():
-		pass
-
+	def close(self):
+		self.alive = not self.alive
+		if(self.socket != None):
+			self.socket.close()
 			
