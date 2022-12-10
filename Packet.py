@@ -95,13 +95,14 @@ class Packet:
 		addr = packet[2:2+length].decode("utf-8") #Ip do router original
 		return addr
 
-	def encode_NACK(addr): #Node with no acess to server addr
-		array = bytearray(1)
+	def encode_STREAM(packet): #Stream
+		array = bytearray(1)	
 		array[0] = int(3)
-		return array
+		return array+packet
 
-	def decode_NACK(packet): #Node with no acess to server addr
-		return packet[0]
+	def decode_STREAM(packet): #Stream
+		print(packet[0])
+		return packet[1:packet[len(packet)-1]]
 
 
 if __name__ == '__main__':
@@ -114,9 +115,12 @@ if __name__ == '__main__':
 	#print("Origem:"+origem)
 	#t = time.time_ns()
 	#print(t)
-	packet = Packet.encode_CC("Setefi",'127.0.0.1',123)
-	(name,ip,tempoI,tempos) = Packet.decode_CC(packet)
-	print("yo")
+	#packet1 = Packet.encode_CC("Setefi",'127.0.0.1',123)
+	#packetStream = Packet.encode_STREAM(packet1)
+	#packet2 = Packet.decode_STREAM(packetStream)
+	#print(Packet.decode_CC(packet1))
+	#(name,ip,tempoI,tempos) = Packet.decode_CC(packet)
+	#print("yo")
 	#print(packet)
 	#print(Packet.decode_CC(packet))
 
