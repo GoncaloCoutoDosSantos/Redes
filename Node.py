@@ -115,11 +115,6 @@ class Node:
 				vs.append(v)
 				self.send(v,packet)
 
-	def send_NACK(self,vizinho): #TODO test
-		logging.debug("Send NACK")
-		packet = Packet.encode_NACK()
-		self.send(self.vizinhos[vizinho],packet)
-
 	def send_flood(self,packet,addr = ""):
 		for i in self.vizinhos:
 			if i != addr:
