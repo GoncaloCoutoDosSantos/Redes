@@ -19,7 +19,7 @@ class VideoStream:
 
 		else:
 			self.file.close()
-			self.file = open(filename, 'rb')
+			self.file = open(self.filename, 'rb')
 			data = self.nextFrame()
 
 		return data
