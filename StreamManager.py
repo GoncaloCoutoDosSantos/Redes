@@ -24,7 +24,7 @@ class StreamManager:
 		c, addr = Connection.listen(s)
 		s.close()
 		self.Recivingtream = c
-		threading.Thread(target=self.__recv,args=(c,addr)).start()
+		threading.Thread(target=self.__recv,args=(addr,)).start()
 
 	def getHostName(self):
 		return self.hostname
@@ -42,15 +42,25 @@ class StreamManager:
 			self.sendstreams.append(s)
 			print("coonection done")
 		else:
-			raise Exception("Connection not established in stream manager") 
+			raise Exception("Connection not established in stream manager")
+
+	def restartReicivingStream(self):
+		self.Recivingtream.close()
+		s = socket.socket(AF_INET,SOCK_DGRAM)
+		s.bind(("",self.port))
+
+		c, addr = Connection.listen(s)
+		s.close()
+		self.Recivingtream = c
+		threading.Thread(target=self.__recv,args=(addr,)).start()
 
 	def removeSendingStream(self,sendingAddress):
 		self.sendstreams[:] = ((connection) 
 			for (connection) in self.sendstreams if connection.getAddress()!=sendingAddress)
 
-	def __recv(self,s,addr):
+	def __recv(self,addr):
 		while self.running:
-			data = s.recv()
+			data = self.Recivingtream.recv()
 			
 			if(data == None):
 				self.running = False

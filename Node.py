@@ -173,7 +173,7 @@ class Node:
 					logging.debug("No flood")
 				self.status()
 
-			elif (data[0] == 2): #TODO test SA
+			elif (data[0] == 2):
 				logging.info("receive SA from {}:".format(addr))
 				addrDest = Packet.decode_SA(data)
 				logging.info("Endereço destino: {}".format(addrDest)) 
@@ -185,11 +185,10 @@ class Node:
 						hasStream = True
 				if(not hasStream): #Se não possuir a stream
 					vizinho = self.table.bestVizinho(addrDest)
-					if(vizinho==None): #TODO fr ao servidor
-						pass
-					else: #Caso contrário vai pedir ao nodo mais rapido
-						self.send_SA(addrDest)
-						#Esperar por resposta??
+					self.send_SA(addrDest)
+					for streamManager in self.streams:
+						if(streamManager.getHostName()==addrDest):
+							streamManager.addSendingStream(addr)
 			else:
 				logging.warning("Receive warning from {} data:{}".format(addr,data))
 
