@@ -5,6 +5,7 @@ import socket, threading, sys, traceback, os
 from Connection import Connection
 import threading
 import logging
+from socket import AF_INET,SOCK_DGRAM
 
 from src.RtpPacket import RtpPacket
 
@@ -33,9 +34,12 @@ class Client:
 		self.requestSent = -1
 		self.teardownAcked = 0
 		self.frameNbr = 0
-		self.c = Connection()
 
-		ret = self.c.connect(("localhost",port))
+		s = socket.socket(AF_INET,SOCK_DGRAM)
+		s.bind(("localhost",port))
+
+		self.c,addr = Connection.listen(s)
+		s.close()
 
 		if(ret):
 			threading.Thread(target=self.recvPacket,args=()).start()
