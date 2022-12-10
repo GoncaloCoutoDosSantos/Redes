@@ -5,23 +5,23 @@ from TabelaEnc import TabelaEnc
 import argparse
 import time
 import logging
+import StreamManager
 from Connection import Connection
 
 CC_TIME = 30
 IP_SERVER = '127.0.0.1'
-
+PORTLOCAL = 12460
+PORTSTREAMS = 13000
 class Node:
 	top = {}
-	def __init__(self,vizinhos,mode,port = 12460):
+	def __init__(self,vizinhos,mode):
 		self.mode = mode
+		self.streams = []
 		logging.info("Mode:{}".format(self.mode))
 		self.flag = True
 		self.host =  socket.gethostname() #cant be local host 
 		logging.info("IP:{}".format(self.host))
-		self.port = port
 		self.vizinhos_all = vizinhos
-		self.streams = []
-		self.SAConfirmations = []
 		logging.info("Todos vizinhos:{}".format(self.vizinhos_all))
 		
 		#self.top[self.host] = []
@@ -32,7 +32,7 @@ class Node:
 		self.table = TabelaEnc([])
 		for i in vizinhos:
 			s = Connection()
-			if s.connect((i,self.port)):
+			if s.connect((i,PORTLOCAL)):
 				self.vizinhos[i] = s
 				logging.debug("Vizinho Ativo:".format(i))
 				self.table.addVizinho(i)
@@ -45,6 +45,7 @@ class Node:
 		#self.send_LSA()
 		if self.mode=="server":
 			threading.Thread(target=self.send_CC_thread,args=()).start()
+			StreamManager(PORTSTREAMS,self.host,#TODO adicionar aqui o video)
 
 		self.status()
 
@@ -53,7 +54,7 @@ class Node:
 
 	def listener(self):
 		self.s = socket.socket(AF_INET,SOCK_DGRAM)
-		self.s.bind(("",self.port))
+		self.s.bind(("",PORTLOCAL))
 
 		while self.flag:
 			c, addr = Connection.listen(self.s)
@@ -75,15 +76,19 @@ class Node:
 	def send_SA(self,serverDestino):
 		vizinho = self.table.bestVizinho(serverDestino)
 
-		sent = False
-		while(not sent):
-			if(vizinho==None):
-				logging.debug("Não há caminho conhecido para o servidor no SA")
-				sent = True
-			else:
-				logging.debug("Send SA")
-				packet = Packet.encode_SA(serverDestino)
-				sent=self.send(vizinho,packet)
+		if(vizinho==None):
+			logging.debug("Não há caminho conhecido para o servidor no SA")
+			#TODO send fr to server
+			#esperar por resposta (cc)
+		else:
+			logging.debug("Send SA")
+			packet = Packet.encode_SA(serverDestino)
+			if(self.send(vizinho,packet)):
+				self.streams.append(StreamManager(PORTSTREAMS,serverDestino,vizinho))
+				#TODO Adiciona o socket do client
+			#else espera por cc
+
+
 
 	def send_CC(self):
 		logging.debug("Send CC")
@@ -164,23 +169,17 @@ class Node:
 				logging.info("Endereço destino: {}".format(addrDest)) 
 				#Verifica se já tem a stream
 				hasStream = False
-				if self.mode=="server":
-					logging.info("Stream sent")
-				else:
-					for (server,entrada,saida) in self.streams: 
-						if(server==addrDest): #Se tiver a stream vai começar a enviar
-							saida = saida + [addr]
-							hasStream = True
-							logging.info("Stream sent")
-					if(not hasStream): #Se não possuir a stream
-						vizinho = self.table.bestVizinho(addrDest)
-						if(vizinho==None): #Caso não haja caminho para a stream flood SBYE TODO atenção a este caso porque deve ser só redondante
-							self.send_SBYE(addrDest)
-						else: #Caso contrário vai pedir ao nodo mais rapido
-							self.SAConfirmations = self.SAConfirmations + [(addr,addrDest)]
-							self.send_SA(addrDest)
-							logging.info("Esperar resposta")
-							#Esperar por resposta??
+				for streamManager in self.streams:
+					if(streamManager.getHostName()==addrDest):
+						streamManager.addSendingStream(addr)
+						hasStream = True
+				if(not hasStream): #Se não possuir a stream
+					vizinho = self.table.bestVizinho(addrDest)
+					if(vizinho==None): #TODO fr ao servidor
+						pass
+					else: #Caso contrário vai pedir ao nodo mais rapido
+						self.send_SA(addrDest)
+						#Esperar por resposta??
 			else:
 				logging.warning("Receive from {} data:{}".format(addr,data))
 

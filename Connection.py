@@ -188,6 +188,8 @@ class Connection:
 
 		return Connection(mode,ret_s,addr,seq),addr
 
+	def getAddress(self):
+		return self.addr
 
 	def close():
 		pass
