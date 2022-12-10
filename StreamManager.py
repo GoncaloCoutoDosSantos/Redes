@@ -18,12 +18,12 @@ class StreamManager:
 		self.running = True
 		self.hostname = hostname
 		
-		s= Connection()
-		if(s.connect((recievingAddress,self.port))):
-			self.Recivingtream = s
-			threading.Thread(target=self.__recv,args=(s,recievingAddress)).start()
-		else:
-			raise Exception("Connection not established in stream manager") 
+		s = socket.socket(AF_INET,SOCK_DGRAM)
+		s.bind(("",self.port))
+
+		c, addr = Connection.listen(s)
+		self.Recivingtream = c
+		threading.Thread(target=self.__recv,args=(c,addr)).start()
 
 	def getHostName(self):
 		return self.hostname
@@ -31,10 +31,15 @@ class StreamManager:
 	def close(self):
 		self.running = False
 
-	def addSendingStream(self,sendingAddress): 
+	def addSendingStream(self,sendingAddress, port=0):
+		print("start adding stream")
+		if(port == 0):
+			port=self.port 
 		s= Connection()
+		print("trying to connect in sending address:"+sendingAddress+" and port:"+str(port))
 		if(s.connect((sendingAddress,self.port))):
 			self.sendstreams.append(s)
+			print("coonection done")
 		else:
 			raise Exception("Connection not established in stream manager") 
 
@@ -54,11 +59,11 @@ class StreamManager:
 				if(self.interface!=None):
 					self.interface.send(Packet.decode_STREAM(data))
 			else:
-				logging.warning("Receive from {} data:{}".format(addr,data))
+				logging.warning("Receive warning from {} data:{}".format(addr,data))
 
 		logging.info("Sai recv {}".format(addr))
 
-	def sendAll(self,connection,packet):
+	def sendAll(self,packet):
 		for connection in self.sendstreams:
 			self.send(connection,packet)
 

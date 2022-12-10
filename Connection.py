@@ -74,7 +74,7 @@ class Connection:
 
 				s.settimeout(timeout)
 				buffer,addr_recv = s.recvfrom(SIZE,MSG_PEEK)
-				logging.debug(":Conn:recv:{}".format(buffer))
+				#logging.debug(":Conn:recv:{}".format(buffer))
 				tipo = buffer[0]
 
 				if (tipo == 0): #recebeu data 
@@ -82,7 +82,7 @@ class Connection:
 					seq_recv = int.from_bytes(buffer[1:2],"big")
 					if(last_seq != seq_recv and self.last_seq != -1):
 						s.recvfrom(SIZE)
-						logging.debug(":Conn:data rejeitado: Esperado:{} recebido:{}".format(last_seq,seq_recv))
+						#logging.debug(":Conn:data rejeitado: Esperado:{} recebido:{}".format(last_seq,seq_recv))
 					elif(target == tipo):
 						self.last_seq = seq_recv 
 						buffer,addr_recv = s.recvfrom(SIZE)
@@ -93,7 +93,7 @@ class Connection:
 					seq_recv = int.from_bytes(buffer[1:2],"big")
 					if(seq != seq_recv):
 						s.recvfrom(SIZE)
-						logging.debug(":Conn:ack rejeitado")
+						#logging.debug(":Conn:ack rejeitado")
 					elif(target == tipo):
 						buffer,addr_recv = s.recvfrom(SIZE)
 						flag = not flag					
@@ -135,12 +135,12 @@ class Connection:
 			s.sendto(mesg,addr)
 			try:
 				buffer,addr_recv = self.recv_buffer(1)
-				logging.debug(":Conn:Recv Ack:{}".format(buffer))
+				#logging.debug(":Conn:Recv Ack:{}".format(buffer))
 				flag = not flag
 				self.seq = (seq + 1) % 256
 			except timeout:
 				tries = tries + 1
-				logging.debug(":Conn:timeout tries: {}".format(tries))
+				#logging.debug(":Conn:timeout tries: {}".format(tries))
 
 		self.lock.release()
 
@@ -157,7 +157,7 @@ class Connection:
 			buffer,addr = self.recv_buffer(0,None)
 			s.sendto(b'\x01' + buffer[1].to_bytes(1,'big'),addr)
 			buffer = buffer[2:]
-			logging.debug(":Conn:recv Data:{}".format(buffer))
+			#logging.debug(":Conn:recv Data:{}".format(buffer))
 			flag = not flag
 	
 		except Exception as e:

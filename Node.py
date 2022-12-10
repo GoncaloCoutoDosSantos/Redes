@@ -5,13 +5,17 @@ from TabelaEnc import TabelaEnc
 import argparse
 import time
 import logging
-import StreamManager
+from StreamManager import StreamManager
+from Server import Server
+from Client import Client
 from Connection import Connection
 
 CC_TIME = 30
 IP_SERVER = '127.0.0.1'
 PORTLOCAL = 12460
 PORTSTREAMS = 13000
+PORTCLIENTVIEW = 14000
+FILENAME = './resources/movie.Mjpeg'
 class Node:
 	top = {}
 	def __init__(self,vizinhos,mode):
@@ -23,7 +27,7 @@ class Node:
 		logging.info("IP:{}".format(self.host))
 		self.vizinhos_all = vizinhos
 		logging.info("Todos vizinhos:{}".format(self.vizinhos_all))
-		
+		self.client = None
 		#self.top[self.host] = []
 		self.vizinhos = {}
 
@@ -45,12 +49,23 @@ class Node:
 		#self.send_LSA()
 		if self.mode=="server":
 			threading.Thread(target=self.send_CC_thread,args=()).start()
-			StreamManager(PORTSTREAMS,self.host,#TODO adicionar aqui o video)
+			threading.Thread(target=self.iniciaStreamManager,args=(self.host,'localhost')).start()
+			self.server = Server(FILENAME,PORTSTREAMS)
+			threading.Thread(target=self.iniciaClientView).start()
+			for stream in self.streams:
+				print("yooo1")
+				stream.addSendingStream('localhost',PORTCLIENTVIEW)
+				print("yooo2")
 
 		self.status()
 
 		threading.Thread(target=self.listener,args=()).start()
 
+	def iniciaClientView(self):
+		self.client= Client(FILENAME,PORTCLIENTVIEW)
+
+	def iniciaStreamManager(self,hostname,address):
+		self.streams.append(StreamManager(PORTSTREAMS,hostname,address))
 
 	def listener(self):
 		self.s = socket.socket(AF_INET,SOCK_DGRAM)
@@ -181,7 +196,7 @@ class Node:
 						self.send_SA(addrDest)
 						#Esperar por resposta??
 			else:
-				logging.warning("Receive from {} data:{}".format(addr,data))
+				logging.warning("Receive warning from {} data:{}".format(addr,data))
 
 		logging.info("Sai recv {}".format(addr))
 

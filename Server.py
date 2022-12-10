@@ -1,6 +1,7 @@
 from src.RtpPacket import RtpPacket 
 from src.VideoStream import VideoStream
 from Connection import Connection
+from Packet import Packet
 import time
 import threading
 import logging
@@ -10,24 +11,22 @@ class Server:
 	def __init__(self,filename,port):
 		self.stream = VideoStream(filename)
 		self.c = Connection()
-		ret = c.connect(("localhost",port)) 
+		ret = self.c.connect(("localhost",port)) 
 		if(ret):
 			threading.Thread(target=self.send_stream,args=()).start()
 
 		else:
 			logging.debug("Server: Connection Refuse")
 
-		return ret
 
-
-	def send_stream(seff):
+	def send_stream(self):
 		while(True):
 			time.sleep(0.05)
 			self.c.send(self.frame())
 
 	def frame(self):
 		data = self.stream.nextFrame()
-
+		ret = None
 		if data: 
 			frameNumber = self.stream.frameNbr()
 			ret = self.makeRtp(data, frameNumber)
@@ -49,4 +48,4 @@ class Server:
 		
 		rtpPacket.encode(version, padding, extension, cc, seqnum, marker, pt, ssrc, payload)
 		
-		return rtpPacket.getPacket()
+		return Packet.encode_STREAM(rtpPacket.getPacket())

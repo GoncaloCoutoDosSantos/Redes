@@ -3,6 +3,7 @@ import tkinter.messagebox as tkMessageBox
 from PIL import Image, ImageTk
 import socket, threading, sys, traceback, os
 from Connection import Connection
+from Packet import Packet
 import threading
 import logging
 from socket import AF_INET,SOCK_DGRAM
@@ -36,19 +37,17 @@ class Client:
 		self.frameNbr = 0
 
 		s = socket.socket(AF_INET,SOCK_DGRAM)
-		s.bind(("localhost",port))
+		print("Clinet port: " + str(port))
+		s.bind(("",port))
 
+		print("trying to listen")
 		self.c,addr = Connection.listen(s)
+		print("close")
 		s.close()
 
-		if(ret):
-			threading.Thread(target=self.recvPacket,args=()).start()
-		else:
-			logging.degub("Client: Connection Refuse")
-
+		threading.Thread(target=self.recvPacket,args=()).start()
 		#threading.Thread(target=self.master.mainloop(),args=()).start()
 
-		return ret
 		
 	def createWidgets(self):
 		"""Build GUI."""
@@ -108,7 +107,7 @@ class Client:
 	def recvPacket(self):		
 		"""Listen for RTP packets."""
 		while True:
-			data = self.c.recv()
+			data = Packet.decode_STREAM(self.c.recv())
 			if data:
 				rtpPacket = RtpPacket()
 				rtpPacket.decode(data)
