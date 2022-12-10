@@ -57,7 +57,7 @@ class Node:
 		threading.Thread(target=self.listener,args=()).start()
 
 	def iniciaClientView(self):
-		self.client= Client(FILENAME,PORTCLIENTVIEW)
+		self.client= Client(FILENAME,PORTSTREAMS)
 
 	def iniciaStreamManager(self,hostname,address):
 		self.streams.append(StreamManager(PORTSTREAMS,hostname,address))
@@ -232,7 +232,7 @@ class Node:
 			elif(comando=="watch" and self.mode=='client'):
 				threading.Thread(target=self.iniciaClientView).start()
 				for stream in self.streams:
-					stream.addSendingStream('localhost',PORTCLIENTVIEW)
+					stream.addSendingStream('',PORTSTREAMS)
 
 if __name__ == '__main__':
 	logging.basicConfig(format='%(message)s',level=logging.DEBUG)#(format='%(levelname)s:%(message)s',level=logging.DEBUG)

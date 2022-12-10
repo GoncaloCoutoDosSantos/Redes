@@ -102,7 +102,7 @@ class Packet:
 
 	def decode_STREAM(packet): #Stream
 		print(packet[0])
-		return packet[1:packet[len(packet)-1]]
+		return packet[1:]
 
 
 if __name__ == '__main__':
@@ -115,10 +115,10 @@ if __name__ == '__main__':
 	#print("Origem:"+origem)
 	#t = time.time_ns()
 	#print(t)
-	#packet1 = Packet.encode_CC("Setefi",'127.0.0.1',123)
-	#packetStream = Packet.encode_STREAM(packet1)
-	#packet2 = Packet.decode_STREAM(packetStream)
-	#print(Packet.decode_CC(packet1))
+	packet1 = Packet.encode_CC("Setefi",'127.0.0.1',123)
+	packetStream = Packet.encode_STREAM(packet1)
+	packet2 = Packet.decode_STREAM(packetStream)
+	print(Packet.decode_CC(packet1))
 	#(name,ip,tempoI,tempos) = Packet.decode_CC(packet)
 	#print("yo")
 	#print(packet)

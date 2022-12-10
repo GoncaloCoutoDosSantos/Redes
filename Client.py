@@ -46,7 +46,7 @@ class Client:
 		s.close()
 
 		threading.Thread(target=self.recvPacket,args=()).start()
-		#threading.Thread(target=self.master.mainloop(),args=()).start()
+		threading.Thread(target=self.master.mainloop(),args=()).start()
 
 		
 	def createWidgets(self):
