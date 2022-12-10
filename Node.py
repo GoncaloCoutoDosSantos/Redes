@@ -115,11 +115,10 @@ class Node:
 				vs.append(v)
 				self.send(v,packet)
 
-	def send_SBYE(self,serverIndisponivel): #TODO test
-		logging.debug("Send SBYE")
-		packet = Packet.encode_SBYE(serverIndisponivel)
-		for i in self.vizinhos:
-			self.send(i,packet)
+	def send_NACK(self,vizinho): #TODO test
+		logging.debug("Send NACK")
+		packet = Packet.encode_NACK()
+		self.send(self.vizinhos[vizinho],packet)
 
 	def send_flood(self,packet,addr = ""):
 		for i in self.vizinhos:
@@ -188,12 +187,6 @@ class Node:
 							self.send_SA(addrDest)
 							logging.info("Esperar resposta")
 							#Esperar por resposta??
-
-			elif (data[0] == 3): #TODO test
-				logging.info("receive SBYE from {}:".format(addr))
-				serverToRemove = Packet.decode_FR(data)
-				if(self.table.rmServerVizinho(serverToRemove,addr)): #rmServerVizinho deteta se é necessario enviar SBYE
-					self.send_SBYE(addrDest)
 			else:
 				logging.warning("Receive from {} data:{}".format(addr,data))
 		logging.info("Sai recv {}".format(addr))

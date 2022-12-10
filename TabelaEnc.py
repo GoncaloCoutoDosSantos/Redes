@@ -78,6 +78,8 @@ class TabelaEnc:
 		return bestVizinho
 
 
+	# -------------------------------------------------------------------------------------------------------------------------------------------
+	# Resumo: Adiciona novo vizinho como chave no dicionario de servidores
 	def addVizinho(self,vizinho):
 		self.lockLock()
 		if vizinho not in self.dicionario:
@@ -87,6 +89,8 @@ class TabelaEnc:
 		self.unlockLock()
 
 
+	# -------------------------------------------------------------------------------------------------------------------------------------------
+	# Resumo: Remove vizinho e as suas entradas do dicionario de servidores
 	def rmVizinho(self,vizinho): #TODO ao remover verificar se não existem mais entradas para o servidor, caso aconteça enviar msg de erro
 		self.lockLock()
 		if vizinho in self.dicionario:

@@ -94,20 +94,13 @@ class Packet:
 		addr = packet[2:2+length].decode("utf-8") #Ip do router original
 		return addr
 
-	def encode_SBYE(addr): #Node with no acess to server addr
-		array = bytearray(1 + 1 + len(addr))
+	def encode_NACK(addr): #Node with no acess to server addr
+		array = bytearray(1)
 		array[0] = int(3)
-		array[1] = len(addr)
-		ind = 2
-		for i in addr: #Put IP host
-			array[ind] = ord(i)
-			ind += 1
 		return array
 
-	def decode_SBYE(packet): #Node with no acess to server addr
-		length = packet[1]
-		addr = packet[2:2+length].decode("utf-8") #Ip do router original
-		return addr
+	def decode_NACK(packet): #Node with no acess to server addr
+		return packet[0]
 
 
 if __name__ == '__main__':
