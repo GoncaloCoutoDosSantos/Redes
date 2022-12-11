@@ -12,7 +12,7 @@ class TabelaEnc:
 		self.hasSend = {}
 		for vizinho in vizinhos:
 			self.dicionario[vizinho] = []
-			self.hasSend[vizinho] = False
+			self.hasSend[vizinho] = []
 
 	def lockLock(self):
 		self.lock.acquire()
@@ -50,8 +50,8 @@ class TabelaEnc:
 
 		if (bestVizinho==vizinho): #Caso este vizinho seja o mais rápido então flood de CC
 			return True
-		elif (self.hasSend[vizinho]):
-			self.hasSend[vizinho] = True
+		elif (host in self.hasSend[vizinho]):
+			self.hasSend[vizinho].append(host)
 			return True
 
 		else:
@@ -89,7 +89,7 @@ class TabelaEnc:
 		self.lockLock()
 		if vizinho not in self.dicionario:
 			self.dicionario[vizinho] = []
-			self.hasSend[vizinho] = False
+			self.hasSend[vizinho] = []
 		else:
 			print("add:Vizinho Repetido")
 		self.unlockLock()
