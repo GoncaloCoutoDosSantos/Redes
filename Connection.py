@@ -141,6 +141,8 @@ class Connection:
 			except timeout:
 				tries = tries + 1
 				#logging.debug(":Conn:timeout tries: {}".format(tries))
+			except Exception as e:
+				logging.warning("Conn:Send exceçao {}".format(e))
 
 		self.lock.release()
 
@@ -196,7 +198,7 @@ class Connection:
 
 	def close(self):
 		pass
-		#self.alive = not self.alive
-		#if(self.socket != None):
-		#	self.socket.close()
+		self.alive = not self.alive
+		if(self.socket != None):
+			self.socket.close()
 			
