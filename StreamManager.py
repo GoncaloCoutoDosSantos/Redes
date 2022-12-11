@@ -62,7 +62,7 @@ class StreamManager:
 			if(data == None):
 				self.running = False
 			elif(data[0] == 3): # STREAM PACKET
-				logging.info("receive Stream, from {}:".format(addr))
+				#logging.info("receive Stream, from {}:".format(addr))
 				self.sendAll(data)
 			else:
 				logging.warning("Receive warning from {} data:{}".format(addr,data))
