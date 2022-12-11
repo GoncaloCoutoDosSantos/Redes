@@ -26,6 +26,9 @@ class StreamManager:
 	def close(self):
 		self.running = False
 
+	def getVizinho(self):
+		return self.Recivingtream.getAddress()[0]
+
 	def addSendingStream(self,sendingAddress, port=0):
 		print("start adding stream")
 		if(port == 0):
@@ -40,11 +43,14 @@ class StreamManager:
 
 	def updateReicivingStream(self):
 		if(self.Recivingtream!= None):
+			print("close")
 			self.Recivingtream.close()
 		s = socket.socket(AF_INET,SOCK_DGRAM)
 		s.bind(("",self.port))
 
+		print("ready to listen")
 		c, addr = Connection.listen(s)
+		print("updated")
 		s.close()
 		self.Recivingtream = c
 		threading.Thread(target=self.__recv,args=(addr,)).start()
@@ -54,9 +60,11 @@ class StreamManager:
 			for (connection) in self.sendstreams if connection.getAddress()!=sendingAddress)
 
 	def __recv(self,addr):
+		self.running = True
 		while self.running:
+			print("yooo1")
 			data = self.Recivingtream.recv()
-			
+			print("yooo2")
 			if(data == None):
 				self.running = False
 			elif(data[0] == 3): # STREAM PACKET
@@ -71,12 +79,14 @@ class StreamManager:
 
 	def sendAll(self,packet):
 		for connection in self.sendstreams:
+			print("sendo stream to " + str(connection.getAddress()) )
 			self.send(connection,packet)
 
 	def send(self,connection,packet):
 		(buffer,addr_recv) = connection.send(packet)
 		if(buffer == None):
 			self.removeSendingStream(connection.getAddress())
+			print("connection closed")
 
 
 if __name__ == '__main__':

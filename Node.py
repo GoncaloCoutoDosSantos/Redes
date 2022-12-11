@@ -90,8 +90,11 @@ class Node:
 		vizinho = self.table.bestVizinho(serverDestino)
 
 		streamManager = self.__getStreamManagerOfHost(serverDestino)
-		
-		if(vizinho==None):
+		if(streamManager!=None and streamManager.getVizinho()==vizinho):
+			print("Stream path already up to date")
+		elif(streamManager!=None and streamManager.getVizinho()==vizinho): #Então encontra-se na situação ideal e SA não é necessario
+			print("SA not necessary so it was not sent")
+		elif(vizinho==None):
 			logging.debug("Não há caminho conhecido para o servidor no SA")
 			#TODO send fr to server
 			#esperar por resposta (cc)
