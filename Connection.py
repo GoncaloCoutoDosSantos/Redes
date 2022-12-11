@@ -13,7 +13,7 @@ Tipos - \x00 = data
 
 
 TIMEOUT = 0.5
-SIZE = 20480#1024 #tamanha maximo dos pacotes
+SIZE = 20480#1024 #tamanho maximo dos pacotes
 
 class Connection:
 	timeout = 0.5 #definition of timeout in seconds
@@ -169,25 +169,31 @@ class Connection:
 	# return a new connection
 	def listen(s,connected = [],mode = "control"):
 		flag = True
+		addr = None
+		ret_s = None
+		seq = 1
 
-		while (flag):
-			s.settimeout(None)
-			buffer,addr = s.recvfrom(SIZE,MSG_PEEK)
-			if(buffer[0] == 3 and addr[0] not in connected):
-				buffer,addr = s.recvfrom(SIZE)
-				seq = buffer[1]
-				flag = not flag
-			else:
-				buffer,addr = s.recvfrom(SIZE)
-				time.sleep(0.01)
+		try:
+			while (flag):
+				s.settimeout(None)
+				buffer,addr = s.recvfrom(SIZE,MSG_PEEK)
+				if(buffer[0] == 3 and addr[0] not in connected):
+					buffer,addr = s.recvfrom(SIZE)
+					seq = buffer[1]
+					flag = not flag
+				else:
+					buffer,addr = s.recvfrom(SIZE)
+					time.sleep(0.01)
 
 
-		ret_s = socket.socket(AF_INET,SOCK_DGRAM)
-		ret_s.bind(("",0))
-		msg = b'\x01' + seq.to_bytes(1,'big')
-		ret_s.sendto(msg,addr)
+			ret_s = socket.socket(AF_INET,SOCK_DGRAM)
+			ret_s.bind(("",0))
+			msg = b'\x01' + seq.to_bytes(1,'big')
+			ret_s.sendto(msg,addr)
 
-		logging.debug("connect to {}".format(addr))
+			logging.debug("connect to {}".format(addr))
+		except IOError as e:
+			logging.info("CONN:Listen bad socket processo de fecho {}".format(e))
 
 		return Connection(mode,ret_s,addr,seq),addr
 

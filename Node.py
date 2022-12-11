@@ -227,6 +227,9 @@ class Node:
 			logging.info("Vizinho Desconectado: {}".format(i))
 		self.s.close()
 		self.flag = not self.flag
+		c = Connection()
+		c.connect(("",PORTLOCAL))
+		c.close()
 		print("done")
 
 	def nodeInterface(self):
