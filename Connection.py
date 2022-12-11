@@ -82,7 +82,7 @@ class Connection:
 					seq_recv = int.from_bytes(buffer[1:2],"big")
 					if(last_seq != seq_recv and self.last_seq != -1):
 						s.recvfrom(SIZE)
-						#logging.debug(":Conn:data rejeitado: Esperado:{} recebido:{}".format(last_seq,seq_recv))
+						logging.debug(":Conn:data rejeitado: Esperado:{} recebido:{} data:".format(last_seq,seq_recv,buffer))
 					elif(target == tipo):
 						self.last_seq = seq_recv 
 						buffer,addr_recv = s.recvfrom(SIZE)
@@ -93,7 +93,7 @@ class Connection:
 					seq_recv = int.from_bytes(buffer[1:2],"big")
 					if(seq != seq_recv):
 						s.recvfrom(SIZE)
-						#logging.debug(":Conn:ack rejeitado")
+						logging.debug(":Conn:ack rejeitado")
 					elif(target == tipo):
 						buffer,addr_recv = s.recvfrom(SIZE)
 						flag = not flag					
@@ -167,18 +167,18 @@ class Connection:
 
 	# funtion used to listen to new connections
 	# return a new connection
-	def listen(s,mode = "control"):
+	def listen(s,connected = [],mode = "control"):
 		flag = True
 
 		while (flag):
 			s.settimeout(None)
 			buffer,addr = s.recvfrom(SIZE,MSG_PEEK)
-			print(buffer)
-			if(buffer[0] == 3):
+			if(buffer[0] == 3 and addr[0] not in connected):
 				buffer,addr = s.recvfrom(SIZE)
 				seq = buffer[1]
 				flag = not flag
 			else:
+				buffer,addr = s.recvfrom(SIZE)
 				time.sleep(0.01)
 
 
@@ -187,13 +187,16 @@ class Connection:
 		msg = b'\x01' + seq.to_bytes(1,'big')
 		ret_s.sendto(msg,addr)
 
+		logging.debug("connect to {}".format(addr))
+
 		return Connection(mode,ret_s,addr,seq),addr
 
 	def getAddress(self):
 		return self.addr
 
 	def close(self):
-		self.alive = not self.alive
-		if(self.socket != None):
-			self.socket.close()
+		pass
+		#self.alive = not self.alive
+		#if(self.socket != None):
+		#	self.socket.close()
 			

@@ -67,7 +67,7 @@ class Node:
 		self.s.bind(("",PORTLOCAL))
 
 		while self.flag:
-			c, addr = Connection.listen(self.s)
+			c, addr = Connection.listen(self.s,self.vizinhos.keys())
 			logging.info('Got connection from {}'.format(addr))
 			logging.debug("{} in {}:{}".format(addr[0],self.vizinhos_all,addr[0] in self.vizinhos_all))
 			if(True):#addr[0] in self.vizinhos_all):
@@ -144,9 +144,11 @@ class Node:
 			return True
 		else:
 			self.rm_Vizinho(i)
+			print("ola")
 			if(self.mode!='server'):
 				#TODO mandar mensagem direta ao servidor
 				print("Envia FR direto ao servidor")
+			logging.debug(self.status())
 			return False
 
 	def recv(self,s,addr):
