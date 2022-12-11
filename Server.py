@@ -21,8 +21,11 @@ class Server:
 
 	def send_stream(self):
 		while(True):
-			time.sleep(0.05)
+			t = time.time_ns()
 			self.c.send(self.frame())
+			t = 0.05 - (time.time_ns() - t) / 1000000000 
+			if(t > 0):
+				time.sleep(t)
 
 	def frame(self):
 		data = self.stream.nextFrame()
