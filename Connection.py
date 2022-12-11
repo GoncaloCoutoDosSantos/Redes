@@ -195,8 +195,7 @@ class Connection:
 		return self.addr
 
 	def close(self):
-		pass
-		#self.alive = not self.alive
-		#if(self.socket != None):
-		#	self.socket.close()
+		self.alive = not self.alive
+		if(self.socket != None):
+			self.socket.close()
 			
