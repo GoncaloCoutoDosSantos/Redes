@@ -9,8 +9,10 @@ class TabelaEnc:
 		self.dicionario = {}
 		self.hosts = []
 		self.lock = threading.RLock()
+		self.hasSend = {}
 		for vizinho in vizinhos:
 			self.dicionario[vizinho] = []
+			self.hasSend[vizinho] = False
 
 	def lockLock(self):
 		self.lock.acquire()
@@ -48,6 +50,10 @@ class TabelaEnc:
 
 		if (bestVizinho==vizinho): #Caso este vizinho seja o mais rápido então flood de CC
 			return True
+		elif (self.hasSend[vizinho]):
+			self.hasSend[vizinho] = True
+			return True
+
 		else:
 			return False
 
@@ -83,6 +89,7 @@ class TabelaEnc:
 		self.lockLock()
 		if vizinho not in self.dicionario:
 			self.dicionario[vizinho] = []
+			self.hasSend[vizinho] = False
 		else:
 			print("add:Vizinho Repetido")
 		self.unlockLock()
@@ -94,6 +101,7 @@ class TabelaEnc:
 		self.lockLock()
 		if vizinho in self.dicionario:
 			self.dicionario.pop(vizinho)
+			self.hasSend.pop(vizinho)
 		else:
 			print("rm:vizinho inexistente")
 		self.unlockLock()
