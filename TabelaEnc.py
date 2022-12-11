@@ -30,7 +30,6 @@ class TabelaEnc:
 	# 	o flood é necessário caso o vizinho (que enviou transmitiu o CC) seja o mais rápido para o servidor adicionado
 	def __updateTempoHost(self,vizinho, host,ip, timeTaken,timeInitial):
 		novaLista = [] #Criar uma nova lista que vai repor a antiga
-
 		self.lockLock()
 		if host not in self.hosts: self.hosts.append(host) #Se o servidor não pertencer á lista de hosts então é adicionado
 
