@@ -17,14 +17,8 @@ class StreamManager:
 		self.interface = None
 		self.running = True
 		self.hostname = hostname
-		
-		s = socket.socket(AF_INET,SOCK_DGRAM)
-		s.bind(("",self.port))
-
-		c, addr = Connection.listen(s)
-		s.close()
-		self.Recivingtream = c
-		threading.Thread(target=self.__recv,args=(addr,)).start()
+		self.Recivingtream = None
+		threading.Thread(target=self.updateReicivingStream).start()
 
 	def getHostName(self):
 		return self.hostname
@@ -44,8 +38,9 @@ class StreamManager:
 		else:
 			raise Exception("Connection not established in stream manager")
 
-	def restartReicivingStream(self):
-		self.Recivingtream.close()
+	def updateReicivingStream(self):
+		if(self.Recivingtream!= None):
+			self.Recivingtream.close()
 		s = socket.socket(AF_INET,SOCK_DGRAM)
 		s.bind(("",self.port))
 
@@ -65,7 +60,7 @@ class StreamManager:
 			if(data == None):
 				self.running = False
 			elif(data[0] == 3): # STREAM PACKET
-				#logging.info("receive Stream, from {}:".format(addr))
+				logging.info("receive Stream, from {}:".format(addr))
 				self.sendAll(data)
 				if(self.interface!=None):
 					self.interface.send(Packet.decode_STREAM(data))

@@ -49,18 +49,21 @@ class Node:
 		#self.send_LSA()
 		if self.mode=="server":
 			threading.Thread(target=self.send_CC_thread,args=()).start()
-			threading.Thread(target=self.iniciaStreamManager,args=(self.host,'localhost')).start()
+			self.streams.append(StreamManager(PORTSTREAMS,self.host,'localhost'))
 			self.server = Server(FILENAME,PORTSTREAMS)
 
 		self.status()
 
 		threading.Thread(target=self.listener,args=()).start()
 
+	def __getStreamManagerOfHost(self,host):
+		for streamManager in self.streams:
+			if(streamManager.getHostName()==host):
+				return streamManager
+		return None
+
 	def iniciaClientView(self):
 		self.client= Client(FILENAME,PORTSTREAMS)
-
-	def iniciaStreamManager(self,hostname,address):
-		self.streams.append(StreamManager(PORTSTREAMS,hostname,address))
 
 	def listener(self):
 		self.s = socket.socket(AF_INET,SOCK_DGRAM)
@@ -86,6 +89,8 @@ class Node:
 	def send_SA(self,serverDestino):
 		vizinho = self.table.bestVizinho(serverDestino)
 
+		streamManager = self.__getStreamManagerOfHost(serverDestino)
+		
 		if(vizinho==None):
 			logging.debug("Não há caminho conhecido para o servidor no SA")
 			#TODO send fr to server
@@ -94,7 +99,10 @@ class Node:
 			logging.debug("Send SA")
 			packet = Packet.encode_SA(serverDestino)
 			if(self.send(vizinho,packet)):
-				self.streams.append(StreamManager(PORTSTREAMS,serverDestino,vizinho))
+				if(streamManager==None):
+					self.streams.append(StreamManager(PORTSTREAMS,serverDestino,vizinho))
+				else:
+					streamManager.updateReicivingStream()
 				#TODO Adiciona o socket do client
 			#else espera por cc
 
@@ -178,17 +186,16 @@ class Node:
 				addrDest = Packet.decode_SA(data)
 				logging.info("Endereço destino: {}".format(addrDest)) 
 				#Verifica se já tem a stream
-				hasStream = False
-				for streamManager in self.streams:
-					if(streamManager.getHostName()==addrDest):
-						streamManager.addSendingStream(addr)
-						hasStream = True
-				if(not hasStream): #Se não possuir a stream
-					vizinho = self.table.bestVizinho(addrDest)
+				streamManager = self.__getStreamManagerOfHost(addrDest)
+				if(streamManager != None):
+					streamManager.addSendingStream(addr)
+				else: #Se não possuir a stream
 					self.send_SA(addrDest)
-					for streamManager in self.streams:
-						if(streamManager.getHostName()==addrDest):
-							streamManager.addSendingStream(addr)
+					streamManager = self.__getStreamManagerOfHost(addrDest)
+					if(streamManager != None):
+						streamManager.addSendingStream(addr)
+					else: 
+						print("Error on receive SA")
 			else:
 				logging.warning("Receive warning from {} data:{}".format(addr,data))
 
