@@ -10,7 +10,7 @@ from Server import Server
 from Client import Client
 from Connection import Connection
 
-CC_TIME = 30
+CC_TIME = 100
 IP_SERVER = '127.0.0.1'
 PORTLOCAL = 12460
 PORTSTREAMS = 13000
@@ -34,17 +34,16 @@ class Node:
 
 		#tenta ligar se aos vizinhos(ve os que estao ativos)
 		self.table = TabelaEnc([])
-		for i in vizinhos:
-			s = Connection()
-			if s.connect((i,PORTLOCAL)):
-				self.vizinhos[i] = s
-				logging.debug("Vizinho Ativo:".format(i))
-				self.table.addVizinho(i)
-				threading.Thread(target=self.recv,args=(s,i)).start()
-			else:
-				#s.close()
-				logging.debug("node {} not active".format(i))
 
+		threadsConnectVizinhos = []
+		barrier = threading.Barrier(len(vizinhos)+1)
+		for i in vizinhos:
+			threadsConnectVizinhos.append(threading.Thread(target=self.__connectToVizinho,args=(i,barrier)))
+			
+		for job in threadsConnectVizinhos:
+			job.start()
+
+		barrier.wait()
 
 		#self.send_LSA()
 		if self.mode=="server":
@@ -55,6 +54,18 @@ class Node:
 		self.status()
 
 		threading.Thread(target=self.listener,args=()).start()
+
+	def __connectToVizinho(self,vizinho,barrier):
+		s = Connection()
+		if s.connect((vizinho,PORTLOCAL)):
+			self.vizinhos[vizinho] = s
+			logging.debug("Vizinho Ativo:".format(vizinho))
+			self.table.addVizinho(vizinho)
+			threading.Thread(target=self.recv,args=(s,vizinho)).start()
+		else:
+			#s.close()
+			logging.debug("node {} not active".format(vizinho))
+		barrier.wait()
 
 	def __getStreamManagerOfHost(self,host):
 		for streamManager in self.streams:
@@ -142,12 +153,17 @@ class Node:
 				self.send(v,packet)
 
 	def send_flood(self,packet,addr = ""):
+		jobs = []
 		for i in self.vizinhos:
 			if i != addr:
 				logging.info("send mesg Flood to {}".format(i))
-				self.send(i,packet)
+				jobs.append(threading.Thread(target=self.send,args=(i,packet)))
 			else:
 				logging.info("didn't send mesg Flood to {}".format(i))
+		for job in jobs:
+			print("sup {}".format(time.time_ns()))
+			job.start()
+			
 
 	def send(self,i,packet):
 		(buffer,addr_recv) = self.vizinhos[i].send(packet)
