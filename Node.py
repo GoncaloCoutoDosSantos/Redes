@@ -214,8 +214,10 @@ class Node:
 	def off(self):
 		for i in self.vizinhos:
 			self.vizinhos[i].close()
-			logging.info("Vizinho Desconectado: ",i)
+			logging.info("Vizinho Desconectado: {}".format(i))
 		self.s.close()
+		self.flag = not self.flag
+		print("done")
 
 	def nodeInterface(self):
 		while(self.flag):
@@ -223,7 +225,6 @@ class Node:
 			comando = input()
 			if(comando=="off"):
 				self.off()
-				self.flag = not self.flag
 			if(comando=="stream"):				
 				threading.Thread(target=self.stream,args=())
 			elif(comando=="sa" and self.mode=='client'):
