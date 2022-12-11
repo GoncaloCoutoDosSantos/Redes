@@ -223,9 +223,17 @@ class Node:
 		logging.info("Sai recv {}".format(addr))
 
 	def rm_Vizinho(self,addr):
-		self.vizinhos.pop(addr)
-		self.table.rmVizinho(addr)
+		
+		logging.info("Revmover Vizinho {}".format(addr))
+
+		if(addr in self.vizinhos):
+			self.vizinhos[addr].close()
+			self.vizinhos.pop(addr)
+			self.table.rmVizinho(addr)
+		else:
+			logging.info("Erro vizinho ja removido")
 		self.status()
+		
 		if self.mode == "server":
 			self.send_CC()
 		elif self.mode == "client":
