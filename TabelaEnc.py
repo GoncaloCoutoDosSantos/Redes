@@ -62,6 +62,7 @@ class TabelaEnc:
 	#   É devolvido True se for necessario dar flood á mensagem CC caso contrário é devolvido False
 	def recievePacket(self,vizinho,packet):
 		(host,ip,tempoI,tempos) = Packet.decode_CC(packet) #Descodificar pacote
+		print("Host cc= "+ str(host))
 		timeTaken = time.time_ns()-tempoI	#Calcular o tempo que a mensagem demorou a chegar desde que o servidor a enviou
 		return self.__updateTempoHost(vizinho,host,ip,timeTaken,tempoI)  #retorna true se for para dar flood
 
@@ -113,7 +114,8 @@ class TabelaEnc:
 			return False #Se o servidor já não existir não faz nada
 
 		tamanhoInicial = len(self.dicionario[vizinho])
-		self.dicionario[vizinho][:] = ((server,ip,timeTakenOld,timeInitialOld) for (server,ip,timeTakenOld,timeInitialOld) in self.dicionario[vizinho] if server!=serverDestino)
+		self.dicionario[vizinho][:] = ((server,ip,timeTakenOld,timeInitialOld) 
+			for (server,ip,timeTakenOld,timeInitialOld) in self.dicionario[vizinho] if server!=serverDestino)
 		tamanhoFinal = self.dicionario[vizinho]
 		self.unlockLock()
 

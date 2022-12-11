@@ -30,13 +30,20 @@ class Packet:
 			ret = ret + "." + str(arr[i])
 		return ret
 
-	def encode_FR(): #Flood request
-		array = bytearray(1)
+	def encode_FR(host): #Flood request
+		array = bytearray(1 + 1 + len(host))
 		array[0] = int(0)
+		array[1] = len(host)
+		ind = 2
+		for i in host: #Puthost
+			array[ind] = ord(i)
+			ind += 1
 		return array
 
 	def decode_FR(packet): #Flood request
-		return packet[0]
+		length = packet[1]
+		host = packet[2:2+length].decode("utf-8") #Ip do router original
+		return host
 
 	def encode_CC(name,ip,tempoI,tempos = []):
 		array = bytearray(1 + 1 + len(name)+ 1 + len(ip))

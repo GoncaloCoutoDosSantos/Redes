@@ -61,11 +61,12 @@ class Node:
 			self.vizinhos[vizinho] = s
 			logging.debug("Vizinho Ativo:".format(vizinho))
 			self.table.addVizinho(vizinho)
+			barrier.wait()
 			threading.Thread(target=self.recv,args=(s,vizinho)).start()
 		else:
 			#s.close()
 			logging.debug("node {} not active".format(vizinho))
-		barrier.wait()
+			barrier.wait()
 
 	def __getStreamManagerOfHost(self,host):
 		for streamManager in self.streams:
@@ -89,9 +90,10 @@ class Node:
 				self.table.addVizinho(addr[0])
 				threading.Thread(target=self.recv,args=(c,addr[0])).start()
 				if self.mode=="server":
+					self.send_FR_initial()
 					self.send_CC()
 				elif self.mode=="client":
-					self.send_FR()
+					self.send_FR_initial()
 
 				self.status()
 			else:
@@ -139,18 +141,16 @@ class Node:
 			self.send_CC()
 			time.sleep(CC_TIME)
 
-	def send_FR(self):
+	def send_FR_initial(self):
 		logging.debug("Send FR")
-		packet = Packet.encode_FR()
 		hosts = self.table.getHosts()
-		logging.debug(hosts)
-		vs = []
-		for i in hosts:
-			v = self.table.bestVizinho(i)
-			if v not in vs:
-				logging.debug("best vizinho {}".format(v))
-				vs.append(v)
-				self.send(v,packet)
+		for host in hosts:
+			self.send_FR(host)
+
+	def send_FR(self,host):
+		packet = Packet.encode_FR(host)
+		vizinho = self.table.bestVizinho(host)
+		self.send(vizinho,packet)
 
 	def send_flood(self,packet,addr = ""):
 		jobs = []
@@ -188,16 +188,16 @@ class Node:
 				inflag = False
 			elif(data[0] == 0): # FR
 				logging.info("receive FR from {}:".format(addr))
-				mesg = Packet.decode_FR(data)
+				host = Packet.decode_FR(data)
 				if self.mode == "server":
 					self.send_CC()
 				elif self.mode == "client":
-					self.send_FR()
+					self.send_FR(host)
 
 			elif (data[0] == 1): # CC
 				logging.info("receive CC from {}:".format(addr))
 				if(self.table.recievePacket(addr,data)):
-					self.send_flood(data,addr) 
+					self.send_flood(data,addr)
 				else:
 					logging.debug("No flood")
 				self.status()
@@ -264,8 +264,10 @@ class Node:
 				self.off()
 			if(comando=="stream"):				
 				threading.Thread(target=self.stream,args=())
-			elif(comando=="sa" and self.mode=='client'):
-				self.send_SA('Server')
+			elif(comando=="sa1" and self.mode=='client'):
+				self.send_SA('Server1')
+			elif(comando=="sa2" and self.mode=='client'):
+				self.send_SA('Server2')
 			elif(comando=="cc" and self.mode=='server'):
 				self.send_CC()
 			elif(comando=="watch" and self.mode=='client'):
