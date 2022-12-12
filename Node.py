@@ -184,7 +184,8 @@ class Node:
 			data = s.recv(1024)
 			
 			if(data == None):
-				self.rm_Vizinho(addr)
+				if(self.flag):
+					self.rm_Vizinho(addr)
 				inflag = False
 			elif(data[0] == 0): # FR
 				logging.info("receive FR from {}:".format(addr))
@@ -231,8 +232,8 @@ class Node:
 		
 		if self.mode == "server":
 			self.send_CC()
-		elif self.mode == "client" or self.mode == "cliente ativo":
-			self.send_FR()
+		elif self.mode == "client":
+			self.send_FR_initial()
 
 	def status(self):
 		logging.debug("Vizinhos Ativos:{}".format(self.vizinhos.keys()))
