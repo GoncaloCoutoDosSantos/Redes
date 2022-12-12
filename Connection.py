@@ -8,6 +8,7 @@ from random import randint
 Pacote - tipo | sequencia | mensagem 
 Tipos - \x00 = data
         \x01 = Ack
+        \x02 = close
         \x03 = connection request
 """
 
@@ -96,7 +97,16 @@ class Connection:
 						logging.debug(":Conn:ack rejeitado")
 					elif(target == tipo):
 						buffer,addr_recv = s.recvfrom(SIZE)
-						flag = not flag					
+						flag = not flag
+
+				elif (tipo == 2): # recebeu close
+					seq = self.seq
+					seq_recv = int.from_bytes(buffer[1:2],"big")
+					buffer,addr_recv = s.recvfrom(SIZE)
+					flag = not flag	
+					logging.debug(":Conn:close received")
+					self.alive = not self.alive
+
 				else:
 					logging.warning(":Conn: PACKET NOT IDENTIFED {}:{}".format(tipo,buffer))
 
@@ -201,7 +211,13 @@ class Connection:
 		return self.addr
 
 	def close(self):
-		self.alive = not self.alive
 		if(self.socket != None):
+			self.socket.sendto(b'\x0200000000',self.addr)
+			try:
+				self.socket.sendto(b'',self.socket.getsockname())
+			except Exception as e:
+				logging.info("Exceçao :{}".format(e))
 			self.socket.close()
+		self.alive = not self.alive
+
 			

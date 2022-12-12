@@ -31,22 +31,28 @@ class StreamManager:
 	def addSendingStream(self,sendingAddress, port=0):
 		if(port == 0):
 			port=self.port 
+		logging.info("try to connect")
 		s= Connection()
 
 		if(s.connect((sendingAddress,self.port))):
+			logging.info("connected")
 			self.sendstreams.append(s)
 		else:
 			raise Exception("Connection not established in stream manager")
 
 	def updateReicivingStream(self):
 		if(self.Recivingtream!= None):
-			print("close")
+			print("ola")
 			self.Recivingtream.close()
+			print("close")
 			#self.running = False
 		s = socket.socket(AF_INET,SOCK_DGRAM)
 		s.bind(("",self.port))
 
+		logging.info("listenig")
 		c, addr = Connection.listen(s)
+		print("ola1")
+
 		s.close()
 		self.Recivingtream = c
 		threading.Thread(target=self.__recv,args=(addr,)).start()
@@ -60,9 +66,10 @@ class StreamManager:
 		while self.running:
 			data = self.Recivingtream.recv()
 			if(data == None):
+				logging.info("Fuck!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!{}".format(self.Recivingtream.getAddress()))
 				self.running = False
 			elif(data[0] == 3): # STREAM PACKET
-				#logging.info("receive Stream, from {}:".format(addr))
+				logging.info("receive Stream, from {}:".format(addr))
 				self.sendAll(data)
 			else:
 				logging.warning("Receive warning from {} data:{}".format(addr,data))
@@ -75,7 +82,9 @@ class StreamManager:
 			self.send(connection,packet)
 
 	def send(self,connection,packet):
+		logging.info("start send")
 		(buffer,addr_recv) = connection.send(packet)
+		logging.info("end send")
 		if(buffer == None):
 			connection.close()
 			self.removeSendingStream(connection.getAddress())
