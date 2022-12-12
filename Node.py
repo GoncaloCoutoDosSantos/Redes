@@ -48,7 +48,7 @@ class Node:
 		#self.send_LSA()
 		if self.mode=="server":
 			threading.Thread(target=self.send_CC_thread,args=()).start()
-			self.streams.append(StreamManager(PORTSTREAMS,self.host,'localhost'))
+			self.streams.append(StreamManager(PORTSTREAMS,self.host,self.mode))
 			self.server = Server(FILENAME,PORTSTREAMS)
 
 		self.status()
@@ -92,14 +92,14 @@ class Node:
 				if self.mode=="server":
 					self.send_FR_initial()
 					self.send_CC()
-				elif self.mode=="client":
+				elif self.mode=="client" or self.mode == "cliente ativo":
 					self.send_FR_initial()
 
 				self.status()
 			else:
 				c.close()
 
-	def send_SA(self,serverDestino):
+	def send_SA(self,serverDestino, sendingAddress=None):
 		vizinho = self.table.bestVizinho(serverDestino)
 
 		streamManager = self.__getStreamManagerOfHost(serverDestino)
@@ -116,9 +116,9 @@ class Node:
 			packet = Packet.encode_SA(serverDestino)
 			if(self.send(vizinho,packet)):
 				if(streamManager==None):
-					self.streams.append(StreamManager(PORTSTREAMS,serverDestino,vizinho))
+					self.streams.append(StreamManager(PORTSTREAMS,serverDestino,self.mode,sendingAddress))
 				else:
-					streamManager.updateReicivingStream()
+					streamManager.updateReicivingStream(self.mode)
 				#TODO Adiciona o socket do client
 			#else espera por cc
 
@@ -191,7 +191,7 @@ class Node:
 				host = Packet.decode_FR(data)
 				if self.mode == "server":
 					self.send_CC()
-				elif self.mode == "client":
+				elif self.mode == "client" or self.mode == "cliente ativo":
 					self.send_FR(host)
 
 			elif (data[0] == 1): # CC
@@ -211,12 +211,7 @@ class Node:
 				if(streamManager != None):
 					streamManager.addSendingStream(addr)
 				else: #Se não possuir a stream
-					self.send_SA(addrDest)
-					streamManager = self.__getStreamManagerOfHost(addrDest)
-					if(streamManager != None):
-						streamManager.addSendingStream(addr)
-					else: 
-						print("Error on receive SA")
+					self.send_SA(addrDest,addr)
 			else:
 				logging.warning("Receive warning from {} data:{}".format(addr,data))
 
@@ -236,7 +231,7 @@ class Node:
 		
 		if self.mode == "server":
 			self.send_CC()
-		elif self.mode == "client":
+		elif self.mode == "client" or self.mode == "cliente ativo":
 			self.send_FR()
 
 	def status(self):
@@ -264,13 +259,14 @@ class Node:
 				self.off()
 			if(comando=="stream"):				
 				threading.Thread(target=self.stream,args=())
-			elif(comando=="sa1" and self.mode=='client'):
+			elif(comando=="sa1" and (self.mode=='client' or self.mode == "cliente ativo")):
+				self.mode = 'cliente ativo'
 				self.send_SA('Server1')
 			elif(comando=="sa2" and self.mode=='client'):
 				self.send_SA('Server2')
 			elif(comando=="cc" and self.mode=='server'):
 				self.send_CC()
-			elif(comando=="watch" and self.mode=='client'):
+			elif(comando=="watch" and self.mode == "cliente ativo"):
 				threading.Thread(target=self.iniciaClientView).start()
 				for stream in self.streams:
 					stream.addSendingStream('',PORTSTREAMS)

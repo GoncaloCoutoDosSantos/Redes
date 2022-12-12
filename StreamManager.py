@@ -8,16 +8,18 @@ import logging
 from Connection import Connection
 
 class StreamManager:
-	#mode == 'client' or 'server'
-	#se for um cliente o recievingAddress é required
-	#se for um servidor o recievingAddress não é utilizado
-	def __init__(self,port,hostname,recievingAddress):
+	#mode == 'client' or "cliente ativo" or "server"
+	#se for um client então fecha recievingStream caso não esteja a passar a stream a alguem
+	def __init__(self,port,hostname,mode, sendingAddress = None):
 		self.sendstreams = []
 		self.port = port
+		self.mode = mode
 		self.running = True
 		self.hostname = hostname
 		self.Recivingtream = None
-		threading.Thread(target=self.updateReicivingStream).start()
+		if(sendingAddress is not None):
+			self.addSendingStream(sendingAddress)
+		threading.Thread(target=self.updateReicivingStream,args=(mode,)).start()
 
 	def getHostName(self):
 		return self.hostname
@@ -38,7 +40,8 @@ class StreamManager:
 		else:
 			raise Exception("Connection not established in stream manager")
 
-	def updateReicivingStream(self):
+	def updateReicivingStream(self,mode):
+		self.mode= mode
 		if(self.Recivingtream!= None):
 			print("close")
 			self.Recivingtream.close()
@@ -62,8 +65,11 @@ class StreamManager:
 			if(data == None):
 				self.running = False
 			elif(data[0] == 3): # STREAM PACKET
-				#logging.info("receive Stream, from {}:".format(addr))
+				logging.info("receive Stream, from {}:".format(addr))
 				self.sendAll(data)
+				if(self.mode=='client' and len(self.sendstreams)==0):
+					print("close recievingStream")
+					self.Recivingtream.close()
 			else:
 				logging.warning("Receive warning from {} data:{}".format(addr,data))
 
