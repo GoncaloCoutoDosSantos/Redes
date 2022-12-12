@@ -29,15 +29,17 @@ class TabelaEnc:
 	#		 -A mensagem CC recebida for mais recente do que a presente na entrada já presente (caso 2)
 	# 	Caso o servidor não esteja presente na lista de hosts então vai ser adicionado
 	#   É devolvido True se for necessario dar flood á mensagem CC caso contrário é devolvido False
-	# 	o flood é necessário caso o vizinho (que enviou transmitiu o CC) seja o mais rápido para o servidor adicionado
+	# 	o flood é necessário caso o vizinho (que enviou transmitiu o CC) seja o mais rápido para o servidor adicionado ou o melhor vizinho tenha mudado
 	def __updateTempoHost(self,vizinho, host,ip, timeTaken,timeInitial):
 		novaLista = [] #Criar uma nova lista que vai repor a antiga
 		self.lockLock()
 		if host not in self.hosts: self.hosts.append(host) #Se o servidor não pertencer á lista de hosts então é adicionado
 
+		oldBestVizinho = self.bestVizinho(host)
 		for (server,oldIp,timeTakenOld,timeInitialOld) in self.dicionario[vizinho]: #iterar todos servidores do vizinho
 			if (server==host): #Se o servidor estiver presente na lista de servidores
 				if(timeInitial<=timeInitialOld): # caso a mensagem seja mais antiga ignora
+					self.unlockLock()
 					return False
 				#Se a mensagem for mais nova, o servidor vai ser atualizar a entrada
 			else: novaLista.append((server,oldIp,timeTakenOld,timeInitialOld)) #Adiciona o servidor já existente há nova lista (sem alterações)
@@ -46,14 +48,14 @@ class TabelaEnc:
 		self.dicionario[vizinho] = novaLista #Atualiza a lista de servidores do vizinho
 
 		bestVizinho = self.bestVizinho(host) #Calcula melhor vizinho para o servidor
+		#appended = (host not in self.hasSend[vizinho])
+		#if(appended):
+		#	self.hasSend[vizinho].append(host)
 		self.unlockLock()
 
-		if (bestVizinho==vizinho): #Caso este vizinho seja o mais rápido então flood de CC
+		#if (oldBestVizinho!=bestVizinho or bestVizinho==vizinho or appended):
+		if (oldBestVizinho!=bestVizinho or bestVizinho==vizinho): #Caso este vizinho seja o mais rápido ou o melhor vizinho mudou então flood de CC 
 			return True
-		elif (host in self.hasSend[vizinho]):
-			self.hasSend[vizinho].append(host)
-			return True
-
 		else:
 			return False
 
@@ -73,7 +75,7 @@ class TabelaEnc:
 	def bestVizinho(self,host):
 		bestTime = math.inf
 		bestVizinho = None
-
+		
 		self.lockLock()
 		for vizinho in self.dicionario: #Iterar todos os vizinhos
 			for (server,ip,timeTaken,timeInitial) in self.dicionario[vizinho]: #Iterar todos os servidores de cada vizinho

@@ -14,12 +14,19 @@ class StreamManager:
 		self.sendstreams = []
 		self.port = port
 		self.mode = mode
+		self.lock = threading.Lock()
 		self.running = True
 		self.hostname = hostname
 		self.Recivingtream = None
 		if(sendingAddress is not None):
 			self.addSendingStream(sendingAddress)
-		threading.Thread(target=self.updateReicivingStream,args=(mode,)).start()
+		self.updateReicivingStream(mode)
+
+	def lockLock(self):
+		self.lock.acquire()
+
+	def unlockLock(self):
+		self.lock.release()
 
 	def getHostName(self):
 		return self.hostname
@@ -27,7 +34,7 @@ class StreamManager:
 	def close(self):
 		self.running = False
 
-	def getVizinho(self):
+	def getSendingStreamVizinho(self):
 		return self.Recivingtream.getAddress()[0]
 
 	def addSendingStream(self,sendingAddress, port=0):
@@ -43,43 +50,55 @@ class StreamManager:
 			raise Exception("Connection not established in stream manager")
 
 	def updateReicivingStream(self,mode):
+		threading.Thread(target=self.__updateReicivingStreamThread,args=(mode,)).start()
+
+
+	def __updateReicivingStreamThread(self,mode):
 		self.mode= mode
 		if(self.Recivingtream!= None):
-			print("ola")
 			self.Recivingtream.close()
-			print("close")
-			#self.running = False
+			print("closed reciving stream")
 		s = socket.socket(AF_INET,SOCK_DGRAM)
 		s.bind(("",self.port))
 
 		logging.info("listenig")
 		c, addr = Connection.listen(s)
-		print("ola1")
+		print("listening done")
 
 		s.close()
 		self.Recivingtream = c
-		threading.Thread(target=self.__recv,args=(addr,)).start()
+		self.__recv(addr)
 
 	def removeSendingStream(self,sendingAddress):
 		self.sendstreams[:] = ((connection) 
 			for (connection) in self.sendstreams if connection.getAddress()!=sendingAddress)
 
+	def isRunning(self):
+		return self.running
+
+
 	def __recv(self,addr):
+		self.lockLock()
 		self.running = True
 		while self.running:
+			print("ready to receive")
 			data = self.Recivingtream.recv()
 			if(data == None):
-				logging.info("Fuck!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!{}".format(self.Recivingtream.getAddress()))
+				logging.info("DATA == NONE")
 				self.running = False
+				print("close recievingStream")
+				self.Recivingtream.close()
 			elif(data[0] == 3): # STREAM PACKET
 				logging.info("receive Stream, from {}:".format(addr))
 				self.sendAll(data)
 				if(self.mode=='client' and len(self.sendstreams)==0):
+					print("no more streams to send")
 					print("close recievingStream")
+					self.running = False
 					self.Recivingtream.close()
 			else:
 				logging.warning("Receive warning from {} data:{}".format(addr,data))
-
+		self.unlockLock()
 		logging.info("Sai recv {}".format(addr))
 
 	def sendAll(self,packet):

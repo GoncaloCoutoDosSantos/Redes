@@ -211,6 +211,8 @@ class Connection:
 		return self.addr
 
 	def close(self):
+		self.lock.acquire()
+
 		if(self.socket != None):
 			self.socket.sendto(b'\x0200000000',self.addr)
 			try:
@@ -218,6 +220,9 @@ class Connection:
 			except Exception as e:
 				logging.info("Exceçao :{}".format(e))
 			self.socket.close()
+		self.socket = None
 		self.alive = not self.alive
+
+		self.lock.release()
 
 			

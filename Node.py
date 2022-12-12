@@ -10,7 +10,7 @@ from Server import Server
 from Client import Client
 from Connection import Connection
 
-CC_TIME = 100
+CC_TIME = 10000
 IP_SERVER = '127.0.0.1'
 PORTLOCAL = 12460
 PORTSTREAMS = 13000
@@ -101,12 +101,10 @@ class Node:
 
 	def send_SA(self,serverDestino, sendingAddress=None):
 		vizinho = self.table.bestVizinho(serverDestino)
-
 		streamManager = self.__getStreamManagerOfHost(serverDestino)
-		if(streamManager!=None and streamManager.getVizinho()==vizinho):
+
+		if(streamManager!=None and streamManager.isRunning() and streamManager.getSendingStreamVizinho()==vizinho):
 			print("Stream path already up to date")
-		elif(streamManager!=None and streamManager.getVizinho()==vizinho): #Então encontra-se na situação ideal e SA não é necessario
-			print("SA not necessary so it was not sent")
 		elif(vizinho==None):
 			logging.debug("Não há caminho conhecido para o servidor no SA")
 			#TODO send fr to server
@@ -118,6 +116,9 @@ class Node:
 				if(streamManager==None):
 					self.streams.append(StreamManager(PORTSTREAMS,serverDestino,self.mode,sendingAddress))
 				else:
+					print("update reciving stream")
+					if(sendingAddress!=None):
+						streamManager.addSendingStream(sendingAddress)
 					streamManager.updateReicivingStream(self.mode)
 				#TODO Adiciona o socket do client
 			#else espera por cc
@@ -209,9 +210,12 @@ class Node:
 				logging.info("Endereço destino: {}".format(addrDest)) 
 				#Verifica se já tem a stream
 				streamManager = self.__getStreamManagerOfHost(addrDest)
-				if(streamManager != None):
+
+				if(streamManager != None and streamManager.isRunning()):
+					print("yo1")
 					streamManager.addSendingStream(addr)
 				else: #Se não possuir a stream
+					print("yo2")
 					self.send_SA(addrDest,addr)
 			else:
 				logging.warning("Receive warning from {} data:{}".format(addr,data))
@@ -263,7 +267,8 @@ class Node:
 			elif(comando=="sa1" and (self.mode=='client' or self.mode == "cliente ativo")):
 				self.mode = 'cliente ativo'
 				self.send_SA('Server1')
-			elif(comando=="sa2" and self.mode=='client'):
+			elif(comando=="sa2" and (self.mode=='client' or self.mode == "cliente ativo")):
+				self.mode = 'cliente ativo'
 				self.send_SA('Server2')
 			elif(comando=="cc" and self.mode=='server'):
 				self.send_CC()
