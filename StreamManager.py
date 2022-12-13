@@ -5,7 +5,7 @@ from TabelaEnc import TabelaEnc
 import argparse
 import time
 import logging
-from Connection import Connection
+from Connection_stream import Connection
 
 class StreamManager:
 	#mode == 'client' or "cliente ativo" or "server"
@@ -110,7 +110,7 @@ class StreamManager:
 				logging.info("receive Stream, from {}:".format(addr))
 
 				(framePacket, timeSent) = Packet.decode_STREAM(data)
-				timeTaken = (time.time_ns()-timeSent)/3
+				timeTaken = (time.time_ns()-timeSent)
 
 				self.timeStampsLock.acquire()
 				self.timeStamps.append(timeTaken)
@@ -131,7 +131,7 @@ class StreamManager:
 	def sendAll(self,packet):
 		for connection in self.sendstreams:
 			logging.info("send stream to " + str(connection.getAddress()) )
-			self.send(connection,packet)
+			threading.Thread(target=self.send,args=(connection,packet)).start()
 
 	def send(self,connection,packet):
 		logging.info("start send")
