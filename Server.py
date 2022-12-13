@@ -1,6 +1,6 @@
 from src.RtpPacket import RtpPacket 
 from src.VideoStream import VideoStream
-from Connection import Connection
+from Connection_stream import Connection
 from Packet import Packet
 import time
 import threading
@@ -23,6 +23,7 @@ class Server:
 		while(True):
 			t = time.time_ns()
 			self.c.send(self.frame())
+			
 			t = 0.05 - (time.time_ns() - t) / 1000000000 
 			if(t > 0):
 				time.sleep(t)
@@ -50,5 +51,5 @@ class Server:
 		rtpPacket = RtpPacket()
 		
 		rtpPacket.encode(version, padding, extension, cc, seqnum, marker, pt, ssrc, payload)
-		
+
 		return Packet.encode_STREAM(rtpPacket.getPacket(),time.time_ns())

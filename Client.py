@@ -2,7 +2,7 @@ from tkinter import *
 import tkinter.messagebox as tkMessageBox
 from PIL import Image, ImageTk
 import socket, threading, sys, traceback, os
-from Connection import Connection
+from Connection_stream import Connection
 from Packet import Packet
 import threading
 import logging
