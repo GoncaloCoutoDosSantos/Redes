@@ -11,6 +11,7 @@ from Client import Client
 from Connection import Connection
 
 CC_TIME = 10000
+GESTOR_FLOODS_SEGUIDOS_TIME = 4
 GESTOR_TABLE_TIME = 1
 TIMEUPDATESA = 2
 IP_SERVER = '127.0.0.1'
@@ -52,11 +53,23 @@ class Node:
 			threading.Thread(target=self.send_CC_thread,args=()).start()
 			self.streams.append(StreamManager(PORTSTREAMS,self.host,self.mode))
 			self.server = Server(FILENAME,PORTSTREAMS)
+			self.floodCC = True
+			self.floodCCLock = threading.Lock()
+			threading.Thread(target=self.__gestorDeFloodsSeguidos,args=()).start()
 
 		self.status()
 
 		threading.Thread(target=self.listener,args=()).start()
 		threading.Thread(target=self.gestorDaTabelaEnc,args=()).start()
+
+	def __gestorDeFloodsSeguidos(self):
+		while(self.flag):
+			self.floodCCLock.acquire()
+			if(self.floodCC):
+				self.send_CC()
+			self.floodCC = False
+			self.floodCCLock.release()
+			time.sleep(GESTOR_FLOODS_SEGUIDOS_TIME)
 
 	def __connectToVizinho(self,vizinho,barrier):
 		s = Connection()
@@ -225,7 +238,9 @@ class Node:
 				logging.info("receive FR from {}:".format(addr))
 				host = Packet.decode_FR(data)
 				if self.mode == "server":
-					self.send_CC()
+					self.floodCCLock.acquire()
+					self.floodCC = True
+					self.floodCCLock.release()
 				elif self.mode == "client" or self.mode == "cliente ativo":
 					self.send_FR(host)
 
