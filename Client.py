@@ -7,6 +7,7 @@ from Packet import Packet
 import threading
 import logging
 from socket import AF_INET,SOCK_DGRAM
+import time
 
 from src.RtpPacket import RtpPacket
 
@@ -35,6 +36,9 @@ class Client:
 		self.requestSent = -1
 		self.teardownAcked = 0
 		self.frameNbr = 0
+		self.buffer = []
+		self.lock = threading.Lock()
+		self.alive = True
 
 		s = socket.socket(AF_INET,SOCK_DGRAM)
 		print("Clinet port: " + str(port))
@@ -46,6 +50,8 @@ class Client:
 		s.close()
 
 		threading.Thread(target=self.recvPacket,args=()).start()
+		time.sleep(1)
+		threading.Thread(target=self.update,args=()).start()
 		self.master.mainloop()
 
 		
@@ -86,7 +92,8 @@ class Client:
 	
 	def exitClient(self):
 		"""Teardown button handler."""
-		#self.sendRtspRequest(self.TEARDOWN)		
+		#self.sendRtspRequest(self.TEARDOWN)
+		self.alive = False		
 		self.master.destroy() # Close the gui window
 		os.remove(CACHE_FILE_NAME + str(self.sessionId) + CACHE_FILE_EXT) # Delete the cache image from video
 
@@ -106,18 +113,32 @@ class Client:
 	
 	def recvPacket(self):		
 		"""Listen for RTP packets."""
-		while True:
+		while self.alive:
 			(data,time) = Packet.decode_STREAM(self.c.recv())
 			if data:
 				rtpPacket = RtpPacket()
 				rtpPacket.decode(data)
-				
+
+				self.lock.acquire()
+				self.buffer.append(rtpPacket)
+				self.lock.release()
+
+	def update(self):
+		rtpPacket = None
+		while (self.alive):
+			self.lock.acquire()
+			if(len(self.buffer) > 0):
+				rtpPacket = self.buffer.pop(0)
+			self.lock.release()
+
+			if(rtpPacket != None):
 				currFrameNbr = rtpPacket.seqNum()
 				print("Current Seq Num: " + str(currFrameNbr))
 									
 				if currFrameNbr > self.frameNbr: # Discard the late packet
 					self.frameNbr = currFrameNbr
 					self.updateMovie(self.writeFrame(rtpPacket.getPayload()))
+					time.sleep(0.05)
 
 					
 	def writeFrame(self, data):
