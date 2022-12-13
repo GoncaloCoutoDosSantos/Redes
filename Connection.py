@@ -105,7 +105,7 @@ class Connection:
 					buffer,addr_recv = s.recvfrom(SIZE)
 					flag = not flag	
 					logging.debug(":Conn:close received")
-					self.alive = not self.alive
+					self.alive = False
 
 				else:
 					logging.warning(":Conn: PACKET NOT IDENTIFED {}:{}".format(tipo,buffer))
@@ -141,7 +141,7 @@ class Connection:
 
 		mesg = tipo + seq.to_bytes(1,'big') + mesg
 
-		while (tries < self.max_tries and not flag) and self.alive:
+		while (tries < self.max_tries and not flag) and self.alive and s != None:
 			s.sendto(mesg,addr)
 			try:
 				buffer,addr_recv = self.recv_buffer(1)
@@ -221,7 +221,7 @@ class Connection:
 				logging.info("Exceçao :{}".format(e))
 			self.socket.close()
 		self.socket = None
-		self.alive = not self.alive
+		self.alive = False
 
 		self.lock.release()
 
