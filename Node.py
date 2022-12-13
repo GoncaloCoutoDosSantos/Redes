@@ -200,7 +200,8 @@ class Node:
 	def send_FR(self,host):
 		packet = Packet.encode_FR(host)
 		vizinho = self.table.bestVizinho(host)
-		self.send(vizinho,packet)
+		if(vizinho != None):
+			self.send(vizinho,packet)
 
 	def send_flood(self,packet,addr = ""):
 		jobs = []
@@ -297,14 +298,16 @@ class Node:
 
 
 	def off(self):
+		self.flag = False
 		for i in self.vizinhos:
 			self.vizinhos[i].close()
 			logging.info("Vizinho Desconectado: {}".format(i))
 		self.s.close()
-		self.flag = not self.flag
 		c = Connection()
 		c.connect(("",PORTLOCAL))
 		c.close()
+		for i in self.streams:
+			i.close()
 		print("done")
 
 	def nodeInterface(self):
