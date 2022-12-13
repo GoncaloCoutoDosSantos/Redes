@@ -91,6 +91,11 @@ class Node:
 			if(streamManager.getHostName()==host):
 				return streamManager
 		return None
+	
+	def closeStreamManagersComingFromVizinho(self,vizinho):
+		for streamManager in self.streams:
+			if(streamManager.getRecivingStreamVizinho()==vizinho):
+				streamManager.close()
 
 	def gestorDaTabelaEnc(self):
 		while(self.flag):
@@ -116,7 +121,7 @@ class Node:
 
 					(_,_,timeTakenAtual,_) = self.table.getHostVizinhoEntry(vizinhoAtual, host)
 					(_,_,timeTakenTable,_) = self.table.getHostVizinhoEntry(vizinhoTable, host)
-					if(timeTakenTable + 10000 < timeTakenAtual and timeTakenTable + timeTakenAtual*0.1 < timeTakenAtual):
+					if(timeTakenTable + 10000 < timeTakenAtual and timeTakenTable + timeTakenAtual*0.2 < timeTakenAtual):
 						self.send_SA(host)
 			time.sleep(GESTOR_TABLE_TIME)
 
@@ -153,8 +158,6 @@ class Node:
 			print("Stream path already up to date")
 		elif(vizinho==None):
 			logging.debug("Não há caminho conhecido para o servidor no SA")
-			#TODO send fr to server
-			#esperar por resposta (cc)
 		else:
 			logging.debug("Send SA")
 			packet = Packet.encode_SA(serverDestino)
@@ -167,10 +170,8 @@ class Node:
 				if(sendingAddress!=None):
 					streamManager.addSendingStream(sendingAddress)
 				streamManager.updateReicivingStream(self.mode)
-
 			self.send(vizinho,packet)
-				#TODO Adiciona o socket do client
-			#else espera por cc
+				
 
 
 
@@ -216,16 +217,29 @@ class Node:
 			job.start()
 			
 
-	def send(self,i,packet):
-		(buffer,addr_recv) = self.vizinhos[i].send(packet)
+	def send(self,vizinho,packet):
+		print("-2")
+		(buffer,addr_recv) = self.vizinhos[vizinho].send(packet)
+		print("-1")
 		if(buffer != None):
 			return True
 		else:
-			self.rm_Vizinho(i)
-			print("ola")
+			print("0")
+			self.rm_Vizinho(vizinho)
+			print("1")
 			if(self.mode!='server'):
-				#TODO mandar mensagem direta ao servidor
-				print("Envia FR direto ao servidor")
+				self.floodCC = True
+				print("2")
+			else:
+				for streamManager in self.streams:
+					if(streamManager.getRecivingStreamVizinho()==vizinho):
+						streamManager.close()
+						print("fechei stream manager")
+						host = streamManager.getHostName()
+						print("3")
+						ip = self.table.getHostIp(host)
+						if(ip!=None):
+							pass #TODO msg tcp ao server
 			logging.debug(self.status())
 			return False
 

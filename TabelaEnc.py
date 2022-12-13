@@ -34,7 +34,7 @@ class TabelaEnc:
 		novaLista = [] #Criar uma nova lista que vai repor a antiga
 		self.lockLock()
 		if host not in self.hosts: self.hosts.append(host) #Se o servidor não pertencer á lista de hosts então é adicionado
-
+	
 		oldBestVizinho = self.bestVizinho(host)
 		for (server,oldIp,timeTakenOld,timeInitialOld) in self.dicionario[vizinho]: #iterar todos servidores do vizinho
 			if (server==host): #Se o servidor estiver presente na lista de servidores
@@ -109,6 +109,15 @@ class TabelaEnc:
 			print("rm:vizinho inexistente")
 		self.unlockLock()
 
+	def getHostIp(self,host):
+		self.lockLock()
+		for vizinho in self.dicionario: #Iterar todos os vizinhos
+			for (server,ip,timeTaken,timeInitial) in self.dicionario[vizinho]: #Iterar todos os servidores de cada vizinho
+				if(server==host):
+					return ip
+		self.unlockLock()
+		return None
+
 	def getHostVizinhoEntry(self,vizinho, host): #Se retornar true então flood SBYE
 		self.lockLock()
 		for (server,oldIp,timeTakenOld,timeInitialOld) in self.dicionario[vizinho]:
@@ -117,23 +126,6 @@ class TabelaEnc:
 				return (server,oldIp,timeTakenOld,timeInitialOld)
 		self.unlockLock()
 		return None
-
-	def rmServerVizinho(self,serverDestino,vizinho): #Se retornar true então flood SBYE
-		self.lockLock()
-		if(self.bestVizinho(serverDestino)==None):
-			return False #Se o servidor já não existir não faz nada
-
-		tamanhoInicial = len(self.dicionario[vizinho])
-		self.dicionario[vizinho][:] = ((server,ip,timeTakenOld,timeInitialOld) 
-			for (server,ip,timeTakenOld,timeInitialOld) in self.dicionario[vizinho] if server!=serverDestino)
-		tamanhoFinal = self.dicionario[vizinho]
-		self.unlockLock()
-
-		if(tamanhoInicial == len(tamanhoFinal)):
-			print("Tamanho inalterado")
-		elif(tamanhoFinal==0): 
-			return True #flood SBYE
-		return False
 
 	def getHosts(self):
 		return self.hosts

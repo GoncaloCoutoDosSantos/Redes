@@ -14,6 +14,7 @@ class StreamManager:
 		self.sendstreams = []
 		self.port = port
 		self.mode = mode
+		self.listener = None
 		self.lock = threading.Lock()
 		self.running = False
 		self.hostname = hostname
@@ -38,6 +39,14 @@ class StreamManager:
 
 	def close(self):
 		self.running = False
+		for connection in self.sendstreams:
+			connection.close()
+		self.sendstreams = []
+		self.Recivingtream.close()
+		if(self.listener != None):
+			c = Connection()
+			c.connect(("",self.port))
+			c.close()
 
 	def getSendingStreamVizinho(self):
 		return self.Recivingtream.getAddress()[0]
@@ -57,20 +66,25 @@ class StreamManager:
 	def updateReicivingStream(self,mode):
 		threading.Thread(target=self.__updateReicivingStreamThread,args=(mode,)).start()
 
+	def getRecivingStreamVizinho(self):
+		return self.Recivingtream.getAddress()
 
 	def __updateReicivingStreamThread(self,mode):
 		self.mode= mode
 		if(self.Recivingtream!= None):
 			self.Recivingtream.close()
 			print("closed reciving stream")
-		s = socket.socket(AF_INET,SOCK_DGRAM)
-		s.bind(("",self.port))
+			
+		self.listener = socket.socket(AF_INET,SOCK_DGRAM)
+		self.listener.bind(("",self.port))
 
 		logging.info("listenig")
-		c, addr = Connection.listen(s)
+		c, addr = Connection.listen(self.listener)
 		print("listening done")
 
-		s.close()
+		self.listener.close()
+		self.listener= None
+
 		self.Recivingtream = c
 		self.__recv(addr)
 
