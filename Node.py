@@ -112,14 +112,17 @@ class Node:
 		else:
 			logging.debug("Send SA")
 			packet = Packet.encode_SA(serverDestino)
-			if(self.send(vizinho,packet)):
-				if(streamManager==None):
-					self.streams.append(StreamManager(PORTSTREAMS,serverDestino,self.mode,sendingAddress))
-				else:
-					print("update reciving stream")
-					if(sendingAddress!=None):
-						streamManager.addSendingStream(sendingAddress)
-					streamManager.updateReicivingStream(self.mode)
+
+
+			if(streamManager==None):
+				threading.Thread(target=self.streams.append,args=(StreamManager(PORTSTREAMS,serverDestino,self.mode,sendingAddress),)).start()
+			else:
+				print("update reciving stream")
+				if(sendingAddress!=None):
+					streamManager.addSendingStream(sendingAddress)
+				streamManager.updateReicivingStream(self.mode)
+
+			self.send(vizinho,packet)
 				#TODO Adiciona o socket do client
 			#else espera por cc
 
