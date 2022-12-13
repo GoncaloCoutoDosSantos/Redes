@@ -11,6 +11,8 @@ from Client import Client
 from Connection import Connection
 
 CC_TIME = 10000
+GESTOR_TABLE_TIME = 1
+TIMEUPDATESA = 2
 IP_SERVER = '127.0.0.1'
 PORTLOCAL = 12460
 PORTSTREAMS = 13000
@@ -54,6 +56,7 @@ class Node:
 		self.status()
 
 		threading.Thread(target=self.listener,args=()).start()
+		threading.Thread(target=self.gestorDaTabelaEnc,args=()).start()
 
 	def __connectToVizinho(self,vizinho,barrier):
 		s = Connection()
@@ -68,11 +71,41 @@ class Node:
 			logging.debug("node {} not active".format(vizinho))
 			barrier.wait()
 
+			
+
 	def __getStreamManagerOfHost(self,host):
 		for streamManager in self.streams:
 			if(streamManager.getHostName()==host):
 				return streamManager
 		return None
+
+	def gestorDaTabelaEnc(self):
+		while(self.flag):
+			for streamManager in self.streams:
+				if(streamManager != None and streamManager.isRunning()):
+					host = streamManager.getHostName()
+					vizinho = streamManager.getSendingStreamVizinho()
+					(timeTaken,timeInitial) = streamManager.getTimeTaken()
+					
+					if(timeTaken!=-1 and vizinho!='127.0.0.1'):
+						self.table.updateTempoHost(vizinho, host,IP_SERVER, timeTaken,timeInitial)
+						self.table.print()
+			time.sleep(GESTOR_TABLE_TIME)
+	
+	def gestorUpdatePathSA(self):
+		while(self.flag):
+			for streamManager in self.streams:
+				if(streamManager != None and streamManager.isRunning()):
+					host = streamManager.getHostName()
+
+					vizinhoAtual = streamManager.getSendingStreamVizinho()
+					vizinhoTable = self.table.bestVizinho(host)
+
+					(_,_,timeTakenAtual,_) = self.table.getHostVizinhoEntry(vizinhoAtual, host)
+					(_,_,timeTakenTable,_) = self.table.getHostVizinhoEntry(vizinhoTable, host)
+					if(timeTakenTable + 10000 < timeTakenAtual and timeTakenTable + timeTakenAtual*0.1 < timeTakenAtual):
+						self.send_SA(host)
+			time.sleep(GESTOR_TABLE_TIME)
 
 	def iniciaClientView(self):
 		self.client= Client(FILENAME,PORTSTREAMS)
@@ -270,9 +303,11 @@ class Node:
 			elif(comando=="sa1" and (self.mode=='client' or self.mode == "cliente ativo")):
 				self.mode = 'cliente ativo'
 				self.send_SA('Server1')
+				threading.Thread(target=self.gestorUpdatePathSA,args=()).start()
 			elif(comando=="sa2" and (self.mode=='client' or self.mode == "cliente ativo")):
 				self.mode = 'cliente ativo'
 				self.send_SA('Server2')
+				threading.Thread(target=self.gestorUpdatePathSA,args=()).start()
 			elif(comando=="cc" and self.mode=='server'):
 				self.send_CC()
 			elif(comando=="watch" and self.mode == "cliente ativo"):

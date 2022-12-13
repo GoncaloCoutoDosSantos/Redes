@@ -30,7 +30,7 @@ class TabelaEnc:
 	# 	Caso o servidor não esteja presente na lista de hosts então vai ser adicionado
 	#   É devolvido True se for necessario dar flood á mensagem CC caso contrário é devolvido False
 	# 	o flood é necessário caso o vizinho (que enviou transmitiu o CC) seja o mais rápido para o servidor adicionado ou o melhor vizinho tenha mudado
-	def __updateTempoHost(self,vizinho, host,ip, timeTaken,timeInitial):
+	def updateTempoHost(self,vizinho, host,ip, timeTaken,timeInitial):
 		novaLista = [] #Criar uma nova lista que vai repor a antiga
 		self.lockLock()
 		if host not in self.hosts: self.hosts.append(host) #Se o servidor não pertencer á lista de hosts então é adicionado
@@ -66,7 +66,7 @@ class TabelaEnc:
 		(host,ip,tempoI,tempos) = Packet.decode_CC(packet) #Descodificar pacote
 		print("Host cc= "+ str(host))
 		timeTaken = time.time_ns()-tempoI	#Calcular o tempo que a mensagem demorou a chegar desde que o servidor a enviou
-		return self.__updateTempoHost(vizinho,host,ip,timeTaken,tempoI)  #retorna true se for para dar flood
+		return self.updateTempoHost(vizinho,host,ip,timeTaken,tempoI)  #retorna true se for para dar flood
 
 	# -------------------------------------------------------------------------------------------------------------------------------------------
 	# Resumo: Calcula o melhor vizinho para um dado host
@@ -109,6 +109,14 @@ class TabelaEnc:
 			print("rm:vizinho inexistente")
 		self.unlockLock()
 
+	def getHostVizinhoEntry(self,vizinho, host): #Se retornar true então flood SBYE
+		self.lockLock()
+		for (server,oldIp,timeTakenOld,timeInitialOld) in self.dicionario[vizinho]:
+			if(server == host):
+				self.unlockLock()
+				return (server,oldIp,timeTakenOld,timeInitialOld)
+		self.unlockLock()
+		return None
 
 	def rmServerVizinho(self,serverDestino,vizinho): #Se retornar true então flood SBYE
 		self.lockLock()
