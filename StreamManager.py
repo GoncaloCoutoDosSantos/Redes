@@ -15,9 +15,14 @@ class StreamManager:
 		self.port = port
 		self.mode = mode
 		self.lock = threading.Lock()
-		self.running = True
+		self.running = False
 		self.hostname = hostname
 		self.Recivingtream = None
+
+		self.timeStamps = []
+		self.lastPacketTime = 0
+		self.timeStampsLock = threading.Lock()
+
 		if(sendingAddress is not None):
 			self.addSendingStream(sendingAddress)
 		self.updateReicivingStream(mode)
@@ -76,12 +81,25 @@ class StreamManager:
 	def isRunning(self):
 		return self.running
 
+	def getTimeTaken(self):
+		self.timeStampsLock.acquire()
+		if(len(self.timeStamps)!=0):
+			mean = sum(self.timeStamps) / len(self.timeStamps)
+			self.timeStamps = []
+			lastTime = self.lastPacketTime
+
+			self.timeStampsLock.release()
+			return (mean,lastTime)
+		
+		else:
+			self.timeStampsLock.release()
+			return (-1,-1)
 
 	def __recv(self,addr):
 		self.lockLock()
 		self.running = True
 		while self.running:
-			print("ready to receive")
+			#print("ready to receive")
 			data = self.Recivingtream.recv()
 			if(data == None):
 				logging.info("DATA == NONE")
@@ -90,6 +108,15 @@ class StreamManager:
 				self.Recivingtream.close()
 			elif(data[0] == 3): # STREAM PACKET
 				logging.info("receive Stream, from {}:".format(addr))
+
+				(framePacket, timeSent) = Packet.decode_STREAM(data)
+				timeTaken = (time.time_ns()-timeSent)/3
+
+				self.timeStampsLock.acquire()
+				self.timeStamps.append(timeTaken)
+				self.lastPacketTime = timeSent
+				self.timeStampsLock.release()
+
 				self.sendAll(data)
 				if(self.mode=='client' and len(self.sendstreams)==0):
 					print("no more streams to send")

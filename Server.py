@@ -51,4 +51,4 @@ class Server:
 		
 		rtpPacket.encode(version, padding, extension, cc, seqnum, marker, pt, ssrc, payload)
 		
-		return Packet.encode_STREAM(rtpPacket.getPacket())
+		return Packet.encode_STREAM(rtpPacket.getPacket(),time.time_ns())

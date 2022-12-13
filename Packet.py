@@ -102,14 +102,15 @@ class Packet:
 		addr = packet[2:2+length].decode("utf-8") #Ip do router original
 		return addr
 
-	def encode_STREAM(packet): #Stream
+	def encode_STREAM(packet,tempoI): #Stream
 		array = bytearray(1)	
 		array[0] = int(3)
-		return array+packet
+		tempoByteA = tempoI.to_bytes(10,'big')
+		return array+tempoByteA+packet
 
 	def decode_STREAM(packet): #Stream
-		print(packet[0])
-		return packet[1:]
+		tempoI = int.from_bytes(packet[1:1+10],'big')
+		return (packet[1+10:],tempoI)
 
 
 if __name__ == '__main__':
@@ -123,8 +124,8 @@ if __name__ == '__main__':
 	#t = time.time_ns()
 	#print(t)
 	packet1 = Packet.encode_CC("Setefi",'127.0.0.1',123)
-	packetStream = Packet.encode_STREAM(packet1)
-	packet2 = Packet.decode_STREAM(packetStream)
+	packetStream = Packet.encode_STREAM(packet1,389021380921)
+	(packet2,tempo) = Packet.decode_STREAM(packetStream)
 	print(Packet.decode_CC(packet1))
 	#(name,ip,tempoI,tempos) = Packet.decode_CC(packet)
 	#print("yo")
@@ -137,4 +138,3 @@ if __name__ == '__main__':
 
 	#ret = Packet.decode_LSA(packet)
 	#print(ret)
-

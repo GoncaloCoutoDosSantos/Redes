@@ -107,7 +107,7 @@ class Client:
 	def recvPacket(self):		
 		"""Listen for RTP packets."""
 		while True:
-			data = Packet.decode_STREAM(self.c.recv())
+			(data,time) = Packet.decode_STREAM(self.c.recv())
 			if data:
 				rtpPacket = RtpPacket()
 				rtpPacket.decode(data)
