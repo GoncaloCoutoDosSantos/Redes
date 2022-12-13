@@ -323,6 +323,20 @@ class Node:
 				self.mode = 'cliente ativo'
 				self.send_SA('Server2')
 				threading.Thread(target=self.gestorUpdatePathSA,args=()).start()
+			elif(comando=="list" and (self.mode=='client' or self.mode == "cliente ativo")):
+				self.mode = 'cliente ativo'
+				hosts = self.table.getHosts()
+				for i in hosts:
+					print(i)
+			elif(comando=="sa" and (self.mode=='client' or self.mode == "cliente ativo")):
+				self.mode = 'cliente ativo'
+				hosts = self.table.getHosts()
+				print("Escolha servidor:")
+				comando = input()
+				if comando in hosts:
+					self.send_SA(comando) 
+					threading.Thread(target=self.gestorUpdatePathSA,args=()).start() 
+				
 			elif(comando=="cc" and self.mode=='server'):
 				self.send_CC()
 			elif(comando=="watch" and self.mode == "cliente ativo"):
