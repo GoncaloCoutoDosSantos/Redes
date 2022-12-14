@@ -157,22 +157,14 @@ class TabelaEnc:
 
 if __name__ == '__main__':
 	tabela = TabelaEnc(['127.0.0.1','127.0.0.2','127.0.0.3'])
-	tempoInicial1 = time.time_ns()
-	time.sleep(0.5)
-	tempoInicial2 = time.time_ns()
+	#tempoInicial1 = time.time_ns()
+	#time.sleep(0.5)
+	#tempoInicial2 = time.time_ns()
+	tabela.updateTempoHost("127.0.0.1", "host","ip", 10,1)
+	tabela.updateTempoHost("127.0.0.2", "host","ip", 20,1)
+	tabela.updateTempoHost("127.0.0.2", "host","ip", 20,2)
+	pass
 
-	packet1 = Packet.encode_CC("ServerName",'IP ADDRESS',tempoInicial1, [])
-	packet2 = Packet.encode_CC("Server",'127.5.2.2',tempoInicial2, [])
-	packet3 = Packet.encode_CC("Server",'127.2.8.4',tempoInicial1, [])
-
-	print(tabela.recievePacket('127.0.0.1',packet1))
-	time.sleep(0.5)
-	print(tabela.recievePacket('127.0.0.2',packet1))
-	print(tabela.bestVizinho('127.5.2.2'))
-	tabela.print()
-	print(tabela.recievePacket('127.0.0.2',packet3))
-	tabela.rmServerVizinho('127.5.2.2','127.0.0.2')
-	print("yo")
 """
 	tabela.rmVizinho('127.0.0.1')
 	print(tabela.bestVizinho('127.5.2.2'))

@@ -116,7 +116,7 @@ class Connection:
 			return buffer,addr_recv
 		
 		except Exception as e:
-			if(self.lock.locked()):
+			if(self.lock_read.locked()):
 				self.lock_read.release()
 			raise e
 
