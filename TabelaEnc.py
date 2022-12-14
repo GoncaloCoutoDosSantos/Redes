@@ -36,6 +36,7 @@ class TabelaEnc:
 		if host not in self.hosts: self.hosts.append(host) #Se o servidor não pertencer á lista de hosts então é adicionado
 	
 		oldBestVizinho = self.bestVizinho(host)
+
 		for (server,oldIp,timeTakenOld,timeInitialOld) in self.dicionario[vizinho]: #iterar todos servidores do vizinho
 			if (server==host): #Se o servidor estiver presente na lista de servidores
 				if(timeInitial<=timeInitialOld): # caso a mensagem seja mais antiga ignora
@@ -46,19 +47,32 @@ class TabelaEnc:
 
 		novaLista.append((host,ip,timeTaken,timeInitial)) #Adiciona/atualiza nova entrada do servidor á lista
 		self.dicionario[vizinho] = novaLista #Atualiza a lista de servidores do vizinho
+		self.atualizaTemposAntigos(host,timeTaken,timeInitial)
 
 		bestVizinho = self.bestVizinho(host) #Calcula melhor vizinho para o servidor
-		#appended = (host not in self.hasSend[vizinho])
-		#if(appended):
-		#	self.hasSend[vizinho].append(host)
+		appended = (host not in self.hasSend[vizinho])
+		if(appended):
+			self.hasSend[vizinho].append(host)
 		self.unlockLock()
 
-		#if (oldBestVizinho!=bestVizinho or bestVizinho==vizinho or appended):
-		if (oldBestVizinho!=bestVizinho or bestVizinho==vizinho): #Caso este vizinho seja o mais rápido ou o melhor vizinho mudou então flood de CC 
+		if (oldBestVizinho!=bestVizinho or bestVizinho==vizinho or appended):
+		#if (oldBestVizinho!=bestVizinho or bestVizinho==vizinho): #Caso este vizinho seja o mais rápido ou o melhor vizinho mudou então flood de CC 
 			return True
 		else:
 			return False
 
+	def atualizaTemposAntigos(self,host,timeTaken,timeInitial):
+		self.lockLock()
+
+		for vizinho in self.dicionario:
+			for (server,oldIp,timeTakenOld,timeInitialOld) in self.dicionario[vizinho]:
+				print("yo")
+				if (server==host and timeInitialOld<timeInitial and timeTakenOld<timeTaken):
+					print("time updated")
+					self.dicionario[vizinho].remove((server,oldIp,timeTakenOld,timeInitialOld))
+					self.dicionario[vizinho].append((server,oldIp,timeTaken+100000,timeInitialOld))
+
+		self.unlockLock()
 	# -------------------------------------------------------------------------------------------------------------------------------------------
 	# Resumo: Atualiza a tabela de encaminhamento conforme o pacote CC
 	#   É devolvido True se for necessario dar flood á mensagem CC caso contrário é devolvido False

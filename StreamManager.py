@@ -35,6 +35,26 @@ class StreamManager:
 		self.ccLogicLock.acquire()
 		self.receivedCC=value
 		self.ccLogicLock.release()
+	
+	def setWaitingForCC(self, value):
+		self.ccLogicLock.acquire()
+		self.waitingForCC=value
+		self.ccLogicLock.release()
+
+	def getReceivedCC(self):
+		return self.receivedCC
+
+	def getWaitingForCC(self):
+		return self.waitingForCC
+
+	def getSendingStreamVizinho(self):
+		return self.Recivingtream.getAddress()[0]
+
+	def getRecivingStreamVizinho(self): #TODO remover uma
+		return self.Recivingtream.getAddress()[0]
+
+	def isRunning(self):
+		return self.running
 
 
 	def lockLock(self):
@@ -57,10 +77,16 @@ class StreamManager:
 			c.connect(("",self.port))
 			c.close()
 
-	def getSendingStreamVizinho(self):
-		return self.Recivingtream.getAddress()[0]
-
+	#If True then it floods LoopDetection
+	#else does nothing
 	def addSendingStream(self,sendingAddress, port=0):
+		loopDetected = False
+		for sendConnection in self.sendstreams:
+			if(sendingAddress == sendConnection.getAddress()[0]):
+				loopDetected = True
+		if(self.Recivingtream!=None and sendingAddress == self.Recivingtream.getAddress()[0]):
+			loopDetected = True
+
 		if(port == 0):
 			port=self.port 
 		logging.info("try to connect")
@@ -69,14 +95,18 @@ class StreamManager:
 		if(s.connect((sendingAddress,self.port))):
 			logging.info("connected")
 			self.sendstreams.append(s)
+			if(loopDetected):
+				print("loop detected")
+				threading.Thread(target=self.send,args=(s,Packet.encode_LD())).start()
 		else:
 			raise Exception("Connection not established in stream manager")
+
+		return loopDetected
+
 
 	def updateReicivingStream(self,mode):
 		threading.Thread(target=self.__updateReicivingStreamThread,args=(mode,)).start()
 
-	def getRecivingStreamVizinho(self):
-		return self.Recivingtream.getAddress()[0]
 
 	def __updateReicivingStreamThread(self,mode):
 		self.mode= mode
@@ -101,8 +131,8 @@ class StreamManager:
 		self.sendstreams[:] = ((connection) 
 			for (connection) in self.sendstreams if connection.getAddress()!=sendingAddress)
 
-	def isRunning(self):
-		return self.running
+
+
 
 	def getTimeTaken(self):
 		self.timeStampsLock.acquire()
@@ -146,10 +176,16 @@ class StreamManager:
 					self.running = False
 					self.close()
 			elif(data[0] == 4):
-				if(self.mode=='client'):
-					print("loop detected")
+				if(self.mode=='client' or self.mode=="cliente ativo"):
+					print("loop detected received")
+					print("self.waitingForCC",self.waitingForCC)
+					print("self.receivedCC",self.receivedCC)
+					self.sendAll(data)
 					self.running = False
 					self.close()
+					if(self.mode=="cliente ativo"):
+						self.setWaitingForCC(True)
+						self.setReceivedCC(False)
 			else:
 				logging.warning("Receive warning from {} data:{}".format(addr,data))
 		self.unlockLock()
@@ -161,9 +197,7 @@ class StreamManager:
 			threading.Thread(target=self.send,args=(connection,packet)).start()
 
 	def send(self,connection,packet):
-		logging.info("start send")
 		(buffer,addr_recv) = connection.send(packet)
-		logging.info("end send")
 		if(buffer == None):
 			connection.close()
 			self.removeSendingStream(connection.getAddress())

@@ -114,7 +114,8 @@ class Node:
 	def gestorUpdatePathSA(self):
 		while(self.flag):
 			for streamManager in self.streams:
-				if(streamManager != None and streamManager.isRunning()):
+
+				if((streamManager != None and streamManager.isRunning()) or (streamManager.getReceivedCC() and streamManager.getWaitingForCC())):
 					host = streamManager.getHostName()
 
 					vizinhoAtual = streamManager.getSendingStreamVizinho()
@@ -124,6 +125,9 @@ class Node:
 					(_,_,timeTakenTable,_) = self.table.getHostVizinhoEntry(vizinhoTable, host)
 					if(timeTakenTable + 10000 < timeTakenAtual and timeTakenTable + timeTakenAtual*0.2 < timeTakenAtual):
 						self.send_SA(host)
+					
+					if(streamManager.getReceivedCC()==True):
+						streamManager.setWaitingForCC(False)
 			time.sleep(GESTOR_TABLE_TIME)
 
 	def iniciaClientView(self):
@@ -163,15 +167,16 @@ class Node:
 			logging.debug("Send SA")
 			packet = Packet.encode_SA(serverDestino)
 
-
+			loopDetected = False #TODO isto está horrible	
 			if(streamManager==None):
 				threading.Thread(target=self.streams.append,args=(StreamManager(PORTSTREAMS,serverDestino,self.mode,sendingAddress),)).start()
 			else:
 				print("update reciving stream")
+				
 				if(sendingAddress!=None):
-					streamManager.addSendingStream(sendingAddress)
-				streamManager.updateReicivingStream(self.mode)
-			self.send(vizinho,packet)
+					loopDetected = streamManager.addSendingStream(sendingAddress)
+				if(not loopDetected): streamManager.updateReicivingStream(self.mode)
+			if(not loopDetected):self.send(vizinho,packet)
 				
 
 
@@ -264,6 +269,11 @@ class Node:
 					self.send_FR(host)
 
 			elif (data[0] == 1): # CC
+				(host,ip,tempoI,tempos) = Packet.decode_CC(data)
+				streamManager = self.__getStreamManagerOfHost(host)
+				if(streamManager!=None):
+					streamManager.setReceivedCC(True)
+
 				logging.info("receive CC from {}:".format(addr))
 				if(self.table.recievePacket(addr,data)):
 					self.send_flood(data,addr)
