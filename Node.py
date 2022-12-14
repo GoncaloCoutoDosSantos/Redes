@@ -21,12 +21,12 @@ PORTCLIENTVIEW = 14000
 FILENAME = './resources/movie.Mjpeg'
 class Node:
 	top = {}
-	def __init__(self,vizinhos,mode):
+	def __init__(self,vizinhos,mode,name):
 		self.mode = mode
 		self.streams = []
 		logging.info("Mode:{}".format(self.mode))
 		self.flag = True
-		self.host =  socket.gethostname() #cant be local host 
+		self.host =  name if name != None else socket.gethostname() #cant be local host 
 		logging.info("IP:{}".format(self.host))
 		self.vizinhos_all = vizinhos
 		logging.info("Todos vizinhos:{}".format(self.vizinhos_all))
@@ -77,8 +77,8 @@ class Node:
 			self.vizinhos[vizinho] = s
 			logging.debug("Vizinho Ativo:".format(vizinho))
 			self.table.addVizinho(vizinho)
-			barrier.wait()
 			threading.Thread(target=self.recv,args=(s,vizinho)).start()
+			barrier.wait()
 		else:
 			#s.close()
 			logging.debug("node {} not active".format(vizinho))
@@ -367,10 +367,11 @@ if __name__ == '__main__':
 	parser = argparse.ArgumentParser()
 	parser.add_argument("vizinhos",nargs="*")
 	parser.add_argument("-m","--mode",choices=["server","client"],default="client")
+	parser.add_argument("-n","--name",default=None)
 	
 	args = parser.parse_args()
 
-	t1 = Node(args.vizinhos,args.mode)
+	t1 = Node(args.vizinhos,args.mode,args.name)
 	t1.nodeInterface()
 
 
