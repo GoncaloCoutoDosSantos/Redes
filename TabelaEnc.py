@@ -29,7 +29,7 @@ class TabelaEnc:
 	#		 -A mensagem CC recebida for mais recente do que a presente na entrada já presente (caso 2)
 	# 	Caso o servidor não esteja presente na lista de hosts então vai ser adicionado
 	#   É devolvido True se for necessario dar flood á mensagem CC caso contrário é devolvido False
-	# 	o flood é necessário caso o vizinho (que enviou transmitiu o CC) seja o mais rápido para o servidor adicionado ou o melhor vizinho tenha mudado
+	# 	o flood é necessário quando o timeInitial da mensagem seja o mais recente (e único) de todas as entradas para o host
 	def updateTempoHost(self,vizinho, host,ip, timeTaken,timeInitial):
 		novaLista = [] #Criar uma nova lista que vai repor a antiga
 		self.lockLock()

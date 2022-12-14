@@ -18,7 +18,7 @@ SIZE = 20480#1024 #tamanho maximo dos pacotes
 
 class Connection:
 	timeout = 0.5 #definition of timeout in seconds
-	max_tries = 5 #number of max tries to do a connection
+	max_tries = 20 #number of max tries to do a connection
 
 
 	def __init__(self,mode = "control",socket = None,addr = None,last_seq = -1):

@@ -224,25 +224,19 @@ class Node:
 			
 
 	def send(self,vizinho,packet):
-		print("-2")
 		(buffer,addr_recv) = self.vizinhos[vizinho].send(packet)
-		print("-1")
 		if(buffer != None):
 			return True
 		else:
-			print("0")
 			self.rm_Vizinho(vizinho)
-			print("1")
 			if(self.mode=='server'):
 				self.floodCC = True
-				print("2")
 			else:
 				for streamManager in self.streams:
 					if(streamManager.getRecivingStreamVizinho()==vizinho):
 						streamManager.close()
 						print("fechei stream manager")
 						host = streamManager.getHostName()
-						print("3")
 						ip = self.table.getHostIp(host)
 						if(ip!=None):
 							pass #TODO msg tcp ao server
@@ -289,10 +283,8 @@ class Node:
 				streamManager = self.__getStreamManagerOfHost(addrDest)
 
 				if(streamManager != None and streamManager.isRunning()):
-					print("yo1")
 					streamManager.addSendingStream(addr)
 				else: #Se não possuir a stream
-					print("yo2")
 					self.send_SA(addrDest,addr)
 			else:
 				logging.warning("Receive warning from {} data:{}".format(addr,data))
