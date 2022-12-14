@@ -21,7 +21,7 @@ PORTCLIENTVIEW = 14000
 FILENAME = './resources/movie.Mjpeg'
 class Node:
 	top = {}
-	def __init__(self,vizinhos,mode,name):
+	def __init__(self,vizinhos,mode,name,ip_server):
 		self.mode = mode
 		self.streams = []
 		logging.info("Mode:{}".format(self.mode))
@@ -33,6 +33,7 @@ class Node:
 		self.client = None
 		#self.top[self.host] = []
 		self.vizinhos = {}
+		self.ip_server = ip_server
 
 
 		#tenta ligar se aos vizinhos(ve os que estao ativos)
@@ -106,7 +107,7 @@ class Node:
 					(timeTaken,timeInitial) = streamManager.getTimeTaken()
 					
 					if(timeTaken!=-1 and vizinho!='127.0.0.1'):
-						self.table.updateTempoHost(vizinho, host,IP_SERVER, timeTaken,timeInitial)
+						self.table.updateTempoHost(vizinho, host,self.ip_server, timeTaken,timeInitial)
 						self.table.print()
 			time.sleep(GESTOR_TABLE_TIME)
 	
@@ -182,7 +183,7 @@ class Node:
 
 	def send_CC(self):
 		logging.debug("Send CC")
-		packet = Packet.encode_CC(self.host,IP_SERVER,time.time_ns(),[])
+		packet = Packet.encode_CC(self.host,self.ip_server,time.time_ns(),[])
 		jobs = []
 		for i in self.vizinhos:
 			jobs.append(threading.Thread(target=self.send,args=(i,packet)))
@@ -378,10 +379,11 @@ if __name__ == '__main__':
 	parser.add_argument("vizinhos",nargs="*")
 	parser.add_argument("-m","--mode",choices=["server","client"],default="client")
 	parser.add_argument("-n","--name",default=None)
+	parser.add_argument("-i","--ip",default=IP_SERVER)
 	
 	args = parser.parse_args()
 
-	t1 = Node(args.vizinhos,args.mode,args.name)
+	t1 = Node(args.vizinhos,args.mode,args.name,args.ip)
 	t1.nodeInterface()
 
 
