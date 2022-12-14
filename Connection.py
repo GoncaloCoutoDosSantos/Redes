@@ -71,7 +71,7 @@ class Connection:
 		try:
 			while flag and self.alive:
 
-				if(self.lock_read.acquire(timeout=timeout)):
+				if(self.lock_read.acquire(timeout=timeout if timeout != None else -1)):
 
 					s.settimeout(timeout)
 					buffer,addr_recv = s.recvfrom(SIZE,MSG_PEEK)
@@ -112,7 +112,7 @@ class Connection:
 
 					self.lock_read.release()
 				else:
-					raise Exception("Timeout")
+					raise Exception("timeout")
 			return buffer,addr_recv
 		
 		except Exception as e:
