@@ -244,7 +244,7 @@ class Node:
 						host = streamManager.getHostName()
 						print("3")
 						ip = self.table.getHostIp(host)
-						if(ip!=None && ip != IP_SERVER):
+						if(ip!=None and ip != IP_SERVER):
 							c = Connection()
 							c.connect((ip,PORTLOCAL))
 							c.close()
