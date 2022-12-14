@@ -112,6 +112,10 @@ class Packet:
 		tempoI = int.from_bytes(packet[1:1+10],'big')
 		return (packet[1+10:],tempoI)
 
+	def encode_LD(packet): #Loop Detected
+		array = bytearray(1)	
+		array[0] = int(4)
+		return array
 
 if __name__ == '__main__':
 	vizinhos = {}

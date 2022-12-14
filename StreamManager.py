@@ -16,17 +16,26 @@ class StreamManager:
 		self.mode = mode
 		self.listener = None
 		self.lock = threading.Lock()
-		self.running = False
 		self.hostname = hostname
 		self.Recivingtream = None
-
 		self.timeStamps = []
 		self.lastPacketTime = 0
 		self.timeStampsLock = threading.Lock()
+		self.running = False
+
+		self.waitingForCC = False
+		self.receivedCC = False
+		self.ccLogicLock = threading.Lock()
 
 		if(sendingAddress is not None):
 			self.addSendingStream(sendingAddress)
 		self.updateReicivingStream(mode)
+
+	def setReceivedCC(self, value):
+		self.ccLogicLock.acquire()
+		self.receivedCC=value
+		self.ccLogicLock.release()
+
 
 	def lockLock(self):
 		self.lock.acquire()
@@ -67,7 +76,7 @@ class StreamManager:
 		threading.Thread(target=self.__updateReicivingStreamThread,args=(mode,)).start()
 
 	def getRecivingStreamVizinho(self):
-		return self.Recivingtream.getAddress()
+		return self.Recivingtream.getAddress()[0]
 
 	def __updateReicivingStreamThread(self,mode):
 		self.mode= mode
@@ -134,9 +143,13 @@ class StreamManager:
 				self.sendAll(data)
 				if(self.mode=='client' and len(self.sendstreams)==0):
 					print("no more streams to send")
-					print("close recievingStream")
 					self.running = False
-					self.Recivingtream.close()
+					self.close()
+			elif(data[0] == 4):
+				if(self.mode=='client'):
+					print("loop detected")
+					self.running = False
+					self.close()
 			else:
 				logging.warning("Receive warning from {} data:{}".format(addr,data))
 		self.unlockLock()

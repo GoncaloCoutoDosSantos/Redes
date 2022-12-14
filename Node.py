@@ -13,7 +13,7 @@ from Connection import Connection
 CC_TIME = 10000
 GESTOR_FLOODS_SEGUIDOS_TIME = 1
 GESTOR_TABLE_TIME = 4
-TIMEUPDATESA = 4
+TIMEUPDATESA = 100000
 IP_SERVER = '127.0.0.1'
 PORTLOCAL = 12460
 PORTSTREAMS = 13000
@@ -227,7 +227,7 @@ class Node:
 			print("0")
 			self.rm_Vizinho(vizinho)
 			print("1")
-			if(self.mode!='server'):
+			if(self.mode=='server'):
 				self.floodCC = True
 				print("2")
 			else:
@@ -296,6 +296,7 @@ class Node:
 			self.vizinhos[addr].close()
 			self.vizinhos.pop(addr)
 			self.table.rmVizinho(addr)
+			print("Removed vizinho")
 		else:
 			logging.info("Erro vizinho ja removido")
 		self.status()

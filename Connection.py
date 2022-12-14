@@ -112,7 +112,7 @@ class Connection:
 
 					self.lock_read.release()
 				else:
-					raise Exception("timeout")
+					raise socket.timeout
 			return buffer,addr_recv
 		
 		except Exception as e:

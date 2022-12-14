@@ -13,7 +13,7 @@ Tipos - \x00 = data
         \x03 = connection request
 """
 
-TIMEOUT_STREAM = 15
+TIMEOUT_STREAM = 5
 KEEP_ALIVE = 0.5
 TIMEOUT = 3
 SIZE = 20480#1024 #tamanho maximo dos pacotes
@@ -77,42 +77,43 @@ class Connection:
 		try:
 			while flag and self.alive:
 
-				self.lock_read.acquire()
-				#logging.info(self.socket.getsockname())
-				s.settimeout(timeout)
-				buffer,addr_recv = s.recvfrom(SIZE,MSG_PEEK)
-				#logging.debug(":Conn:recv:{} | time: {}".format(buffer[:20],time.time()))
-				tipo = buffer[0]
+				if(self.lock_read.acquire(timeout=timeout if timeout != None else -1)):
+					#logging.info(self.socket.getsockname())
+					s.settimeout(timeout)
+					buffer,addr_recv = s.recvfrom(SIZE,MSG_PEEK)
+					#logging.debug(":Conn:recv:{} | time: {}".format(buffer[:20],time.time()))
+					tipo = buffer[0]
 
-				if (tipo == 0): #recebeu data 
-					last_seq = (self.last_seq + 1) % 256
-					seq_recv = int.from_bytes(buffer[1:2],"big")
-					if(target == tipo):
-						self.last_seq = seq_recv 
+					if (tipo == 0): #recebeu data 
+						last_seq = (self.last_seq + 1) % 256
+						seq_recv = int.from_bytes(buffer[1:2],"big")
+						if(target == tipo):
+							self.last_seq = seq_recv 
+							buffer,addr_recv = s.recvfrom(SIZE)
+							flag = not flag
+
+					elif (tipo == 1): # recebeu ack
+						seq = self.seq
+						seq_recv = int.from_bytes(buffer[1:2],"big")
+
+						if(target == tipo):
+							buffer,addr_recv = s.recvfrom(SIZE)
+							flag = not flag
+
+					elif (tipo == 2): # recebeu close
+						seq = self.seq
+						seq_recv = int.from_bytes(buffer[1:2],"big")
 						buffer,addr_recv = s.recvfrom(SIZE)
-						flag = not flag
+						flag = not flag	
+						logging.debug(":Conn:close received")
+						self.alive = not self.alive
 
-				elif (tipo == 1): # recebeu ack
-					seq = self.seq
-					seq_recv = int.from_bytes(buffer[1:2],"big")
+					else:
+						logging.warning(":Conn: PACKET NOT IDENTIFED {}:{}".format(tipo,buffer))
 
-					if(target == tipo):
-						buffer,addr_recv = s.recvfrom(SIZE)
-						flag = not flag
-
-				elif (tipo == 2): # recebeu close
-					seq = self.seq
-					seq_recv = int.from_bytes(buffer[1:2],"big")
-					buffer,addr_recv = s.recvfrom(SIZE)
-					flag = not flag	
-					logging.debug(":Conn:close received")
-					self.alive = not self.alive
-
+					self.lock_read.release()
 				else:
-					logging.warning(":Conn: PACKET NOT IDENTIFED {}:{}".format(tipo,buffer))
-
-				self.lock_read.release()
-			
+					raise socket.timeout
 			return buffer,addr_recv
 		
 		except Exception as e:
@@ -135,6 +136,9 @@ class Connection:
 		except timeout:
 			logging.info("keep alive timeout")
 			self.alive = not self.alive
+		except Exception as e:
+			logging.warning(":Conn: {}".format(e))
+
 
 
 		
