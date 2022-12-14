@@ -238,8 +238,10 @@ class Node:
 						print("fechei stream manager")
 						host = streamManager.getHostName()
 						ip = self.table.getHostIp(host)
-						if(ip!=None):
-							pass #TODO msg tcp ao server
+						if(ip!=None and ip != IP_SERVER):
+							c = Connection()
+							c.connect((ip,PORTLOCAL))
+							c.close()
 			logging.debug(self.status())
 			return False
 
