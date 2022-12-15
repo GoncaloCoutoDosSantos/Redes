@@ -249,8 +249,16 @@ class Node:
 			if(self.mode=='server'):
 				self.floodCC = True
 			else:
-				for host in self.table.getHosts():	
-					self.send_FR_Direct(host)
+				for streamManager in self.streams:
+					if(streamManager.getRecivingStreamVizinho()==vizinho):
+						streamManager.close()
+						print("fechei stream manager")
+						host = streamManager.getHostName()
+						ip = self.table.getHostIp(host)
+						if(ip!=None and ip != IP_SERVER):
+							c = Connection()
+							c.connect((ip,PORTLOCAL))
+							c.close()
 			logging.debug(self.status())
 			return False
 

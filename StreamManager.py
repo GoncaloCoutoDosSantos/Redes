@@ -156,12 +156,10 @@ class StreamManager:
 			data = self.Recivingtream.recv()
 			if(data == None):
 				logging.info("DATA == NONE")
-				self.running = False
 				print("close recievingStream")
 				self.Recivingtream.close()
 				self.Recivingtream= None
-				self.setWaitingForCC(True)
-				self.setReceivedCC(False)
+				self.running = False
 			elif(data[0] == 3): # STREAM PACKET
 				logging.info("receive Stream, from {}:".format(addr))
 
