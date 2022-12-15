@@ -47,10 +47,9 @@ class StreamManager:
 	def getWaitingForCC(self):
 		return self.waitingForCC
 
-	def getSendingStreamVizinho(self):
-		return self.Recivingtream.getAddress()[0]
-
 	def getRecivingStreamVizinho(self): #TODO remover uma
+		if(self.Recivingtream==None):
+			return None
 		return self.Recivingtream.getAddress()[0]
 
 	def isRunning(self):
@@ -72,6 +71,7 @@ class StreamManager:
 			connection.close()
 		self.sendstreams = []
 		self.Recivingtream.close()
+		self.Recivingtream = None
 		if(self.listener != None):
 			c = Connection()
 			c.connect(("",self.port))
@@ -159,6 +159,9 @@ class StreamManager:
 				self.running = False
 				print("close recievingStream")
 				self.Recivingtream.close()
+				self.Recivingtream= None
+				self.setWaitingForCC(True)
+				self.setReceivedCC(False)
 			elif(data[0] == 3): # STREAM PACKET
 				logging.info("receive Stream, from {}:".format(addr))
 
@@ -178,14 +181,13 @@ class StreamManager:
 			elif(data[0] == 4):
 				if(self.mode=='client' or self.mode=="cliente ativo"):
 					print("loop detected received")
-					print("self.waitingForCC",self.waitingForCC)
-					print("self.receivedCC",self.receivedCC)
 					self.sendAll(data)
 					self.running = False
 					self.close()
-					if(self.mode=="cliente ativo"):
-						self.setWaitingForCC(True)
-						self.setReceivedCC(False)
+					self.setWaitingForCC(True)
+					self.setReceivedCC(False)
+					print("self.waitingForCC",self.waitingForCC)
+					print("self.receivedCC",self.receivedCC)
 			else:
 				logging.warning("Receive warning from {} data:{}".format(addr,data))
 		self.unlockLock()

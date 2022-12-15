@@ -30,49 +30,50 @@ class TabelaEnc:
 	# 	Caso o servidor não esteja presente na lista de hosts então vai ser adicionado
 	#   É devolvido True se for necessario dar flood á mensagem CC caso contrário é devolvido False
 	# 	o flood é necessário quando o timeInitial da mensagem seja o mais recente (e único) de todas as entradas para o host
-	def updateTempoHost(self,vizinho, host,ip, timeTaken,timeInitial):
-		novaLista = [] #Criar uma nova lista que vai repor a antiga
+	def updateTempoHost(self,vizinho, host,ip, timeTaken,timeInitial, updateEntries= False):
 		self.lockLock()
 		if host not in self.hosts: self.hosts.append(host) #Se o servidor não pertencer á lista de hosts então é adicionado
 	
-		oldBestVizinho = self.bestVizinho(host)
-
-		for (server,oldIp,timeTakenOld,timeInitialOld) in self.dicionario[vizinho]: #iterar todos servidores do vizinho
-			if (server==host): #Se o servidor estiver presente na lista de servidores
-				if(timeInitial<=timeInitialOld): # caso a mensagem seja mais antiga ignora
-					self.unlockLock()
-					return False
-				#Se a mensagem for mais nova, o servidor vai ser atualizar a entrada
-			else: novaLista.append((server,oldIp,timeTakenOld,timeInitialOld)) #Adiciona o servidor já existente há nova lista (sem alterações)
-
-		novaLista.append((host,ip,timeTaken,timeInitial)) #Adiciona/atualiza nova entrada do servidor á lista
-		self.dicionario[vizinho] = novaLista #Atualiza a lista de servidores do vizinho
-		self.atualizaTemposAntigos(host,timeTaken,timeInitial)
-
-		bestVizinho = self.bestVizinho(host) #Calcula melhor vizinho para o servidor
+		maisRecente = self.adicionaEntrada(vizinho, host,ip, timeTaken,timeInitial,updateEntries)
 		appended = (host not in self.hasSend[vizinho])
 		if(appended):
 			self.hasSend[vizinho].append(host)
+
 		self.unlockLock()
 
-		if (oldBestVizinho!=bestVizinho or bestVizinho==vizinho or appended):
-		#if (oldBestVizinho!=bestVizinho or bestVizinho==vizinho): #Caso este vizinho seja o mais rápido ou o melhor vizinho mudou então flood de CC 
+		if (maisRecente):
 			return True
 		else:
 			return False
 
-	def atualizaTemposAntigos(self,host,timeTaken,timeInitial):
+	def adicionaEntrada(self,vizinho, host,ip, timeTaken,timeInitial,updateEntries):
+		flood = True
 		self.lockLock()
 
-		for vizinho in self.dicionario:
-			for (server,oldIp,timeTakenOld,timeInitialOld) in self.dicionario[vizinho]:
-				print("yo")
-				if (server==host and timeInitialOld<timeInitial and timeTakenOld<timeTaken):
-					print("time updated")
-					self.dicionario[vizinho].remove((server,oldIp,timeTakenOld,timeInitialOld))
-					self.dicionario[vizinho].append((server,oldIp,timeTaken+100000,timeInitialOld))
-
+		new = True
+		for (hostOld,ipOld,timeTakenOld,timeInitialOld) in self.dicionario[vizinho]:
+			if(hostOld==host):
+				new = False
+		if(new):
+			self.dicionario[vizinho].append((host,ip, timeTaken,timeInitial))
+		else:
+			novos = 0
+			for vizinhoTemp in self.dicionario:
+				for (server,oldIp,timeTakenOld,timeInitialOld) in self.dicionario[vizinhoTemp]:
+					if (server==host):
+						if(timeInitialOld<timeInitial):
+							if(vizinhoTemp==vizinho):
+								self.dicionario[vizinhoTemp].remove((server,oldIp,timeTakenOld,timeInitialOld))
+								self.dicionario[vizinhoTemp].append((host,ip, timeTaken,timeInitial))
+							elif(timeTakenOld<timeTaken and updateEntries):
+								self.dicionario[vizinhoTemp].remove((server,oldIp,timeTakenOld,timeInitialOld))
+								self.dicionario[vizinhoTemp].append((server,oldIp,timeTaken+100000,timeInitialOld))
+						else:
+							novos+=1
+			if(novos>=2):
+				flood= False		
 		self.unlockLock()
+		return flood
 	# -------------------------------------------------------------------------------------------------------------------------------------------
 	# Resumo: Atualiza a tabela de encaminhamento conforme o pacote CC
 	#   É devolvido True se for necessario dar flood á mensagem CC caso contrário é devolvido False
@@ -80,7 +81,7 @@ class TabelaEnc:
 		(host,ip,tempoI,tempos) = Packet.decode_CC(packet) #Descodificar pacote
 		print("Host cc= "+ str(host))
 		timeTaken = time.time_ns()-tempoI	#Calcular o tempo que a mensagem demorou a chegar desde que o servidor a enviou
-		return self.updateTempoHost(vizinho,host,ip,timeTaken,tempoI)  #retorna true se for para dar flood
+		return self.updateTempoHost(vizinho,host,ip,timeTaken,tempoI, True)  #retorna true se for para dar flood
 
 	# -------------------------------------------------------------------------------------------------------------------------------------------
 	# Resumo: Calcula o melhor vizinho para um dado host
@@ -128,6 +129,7 @@ class TabelaEnc:
 		for vizinho in self.dicionario: #Iterar todos os vizinhos
 			for (server,ip,timeTaken,timeInitial) in self.dicionario[vizinho]: #Iterar todos os servidores de cada vizinho
 				if(server==host):
+					self.unlockLock()
 					return ip
 		self.unlockLock()
 		return None
@@ -161,8 +163,9 @@ if __name__ == '__main__':
 	#time.sleep(0.5)
 	#tempoInicial2 = time.time_ns()
 	tabela.updateTempoHost("127.0.0.1", "host","ip", 10,1)
+	tabela.updateTempoHost("127.0.0.1", "host","ip", 10,1)
 	tabela.updateTempoHost("127.0.0.2", "host","ip", 20,1)
-	tabela.updateTempoHost("127.0.0.2", "host","ip", 20,2)
+	tabela.updateTempoHost("127.0.0.1", "host","ip", 10,2)
 	pass
 
 """

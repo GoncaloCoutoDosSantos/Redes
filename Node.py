@@ -10,10 +10,10 @@ from Server import Server
 from Client import Client
 from Connection import Connection
 
-CC_TIME = 10000
+CC_TIME = 30
 GESTOR_FLOODS_SEGUIDOS_TIME = 1
 GESTOR_TABLE_TIME = 4
-TIMEUPDATESA = 100000
+TIMEUPDATESA = 4
 IP_SERVER = '127.0.0.1'
 PORTLOCAL = 12460
 PORTSTREAMS = 13000
@@ -62,6 +62,7 @@ class Node:
 
 		threading.Thread(target=self.listener,args=()).start()
 		threading.Thread(target=self.gestorDaTabelaEnc,args=()).start()
+		threading.Thread(target=self.gestorUpdatePathSA,args=()).start()
 
 	def __gestorDeFloodsSeguidos(self):
 		while(self.flag):
@@ -103,29 +104,33 @@ class Node:
 			for streamManager in self.streams:
 				if(streamManager != None and streamManager.isRunning()):
 					host = streamManager.getHostName()
-					vizinho = streamManager.getSendingStreamVizinho()
+					vizinho = streamManager.getRecivingStreamVizinho()
 					(timeTaken,timeInitial) = streamManager.getTimeTaken()
-					
+
 					if(timeTaken!=-1 and vizinho!='127.0.0.1'):
-						self.table.updateTempoHost(vizinho, host,self.ip_server, timeTaken,timeInitial)
+						self.table.updateTempoHost(vizinho, host,self.table.getHostIp(host), timeTaken,timeInitial)
 						self.table.print()
 			time.sleep(GESTOR_TABLE_TIME)
 	
 	def gestorUpdatePathSA(self):
 		while(self.flag):
 			for streamManager in self.streams:
-
-				if((streamManager != None and streamManager.isRunning()) or (streamManager.getReceivedCC() and streamManager.getWaitingForCC())):
+				if(streamManager != None and streamManager.getReceivedCC()==False and streamManager.getWaitingForCC() 
+				and self.mode=="cliente ativo"):
+					self.send_FR_Direct(streamManager.getHostName())
+					time.sleep(GESTOR_TABLE_TIME)
+				if( streamManager != None and streamManager.getRecivingStreamVizinho()!='127.0.0.1' 
+				and (streamManager.isRunning() or (streamManager.getReceivedCC() and streamManager.getWaitingForCC()))):
 					host = streamManager.getHostName()
-
-					vizinhoAtual = streamManager.getSendingStreamVizinho()
-					vizinhoTable = self.table.bestVizinho(host)
-
-					(_,_,timeTakenAtual,_) = self.table.getHostVizinhoEntry(vizinhoAtual, host)
-					(_,_,timeTakenTable,_) = self.table.getHostVizinhoEntry(vizinhoTable, host)
-					if(timeTakenTable + 10000 < timeTakenAtual and timeTakenTable + timeTakenAtual*0.2 < timeTakenAtual):
+					vizinhoAtual = streamManager.getRecivingStreamVizinho()
+					if(vizinhoAtual !=None):
+						vizinhoTable = self.table.bestVizinho(host)
+						(_,_,timeTakenAtual,_) = self.table.getHostVizinhoEntry(vizinhoAtual, host)
+						(_,_,timeTakenTable,_) = self.table.getHostVizinhoEntry(vizinhoTable, host)
+						if(timeTakenTable + 10000 < timeTakenAtual and timeTakenTable + timeTakenAtual*0.2 < timeTakenAtual):
+							self.send_SA(host)
+					else:
 						self.send_SA(host)
-					
 					if(streamManager.getReceivedCC()==True):
 						streamManager.setWaitingForCC(False)
 			time.sleep(GESTOR_TABLE_TIME)
@@ -147,7 +152,7 @@ class Node:
 				threading.Thread(target=self.recv,args=(c,addr[0])).start()
 				if self.mode=="server":
 					self.send_FR_initial()
-					self.send_CC()
+					self.floodCC = True
 				elif self.mode=="client" or self.mode == "cliente ativo":
 					self.send_FR_initial()
 
@@ -159,7 +164,7 @@ class Node:
 		vizinho = self.table.bestVizinho(serverDestino)
 		streamManager = self.__getStreamManagerOfHost(serverDestino)
 
-		if(streamManager!=None and streamManager.isRunning() and streamManager.getSendingStreamVizinho()==vizinho):
+		if(streamManager!=None and streamManager.isRunning() and streamManager.getRecivingStreamVizinho()==vizinho):
 			print("Stream path already up to date")
 		elif(vizinho==None):
 			logging.debug("Não há caminho conhecido para o servidor no SA")
@@ -189,7 +194,6 @@ class Node:
 			jobs.append(threading.Thread(target=self.send,args=(i,packet)))
 		
 		for job in jobs:
-			print("sup {}".format(time.time_ns()))
 			job.start()
 
 
@@ -210,16 +214,28 @@ class Node:
 		if(vizinho != None):
 			self.send(vizinho,packet)
 
+	def send_FR_Direct(self,host):
+		print("Send FR direct")
+		print("host :",host)
+		ip = self.table.getHostIp(host)
+		print("ip: ",ip)
+		if(ip!=None and ip != IP_SERVER):
+			c = Connection()
+			c.connect((ip,PORTLOCAL))
+			c.close()
+			
+	
+
+
 	def send_flood(self,packet,addr = ""):
 		jobs = []
 		for i in self.vizinhos:
 			if i != addr:
 				logging.info("send mesg Flood to {}".format(i))
-				jobs.append(threading.Thread(target=self.send,args=(i,packet)))
+				jobs.append(threading.Thread(target=self.send,args=(i,packet))) 
 			else:
 				logging.info("didn't send mesg Flood to {}".format(i))
 		for job in jobs:
-			print("sup {}".format(time.time_ns()))
 			job.start()
 			
 
@@ -228,20 +244,13 @@ class Node:
 		if(buffer != None):
 			return True
 		else:
+			print("send")
 			self.rm_Vizinho(vizinho)
 			if(self.mode=='server'):
 				self.floodCC = True
 			else:
-				for streamManager in self.streams:
-					if(streamManager.getRecivingStreamVizinho()==vizinho):
-						streamManager.close()
-						print("fechei stream manager")
-						host = streamManager.getHostName()
-						ip = self.table.getHostIp(host)
-						if(ip!=None and ip != IP_SERVER):
-							c = Connection()
-							c.connect((ip,PORTLOCAL))
-							c.close()
+				for host in self.table.getHosts():	
+					self.send_FR_Direct(host)
 			logging.debug(self.status())
 			return False
 
@@ -252,6 +261,7 @@ class Node:
 			
 			if(data == None):
 				if(self.flag):
+					print("receive")
 					self.rm_Vizinho(addr)
 				inflag = False
 			elif(data[0] == 0): # FR
@@ -341,11 +351,9 @@ class Node:
 			elif(comando=="sa1" and (self.mode=='client' or self.mode == "cliente ativo")):
 				self.mode = 'cliente ativo'
 				self.send_SA('Server1')
-				threading.Thread(target=self.gestorUpdatePathSA,args=()).start()
 			elif(comando=="sa2" and (self.mode=='client' or self.mode == "cliente ativo")):
 				self.mode = 'cliente ativo'
 				self.send_SA('Server2')
-				threading.Thread(target=self.gestorUpdatePathSA,args=()).start()
 			elif(comando=="list" and (self.mode=='client' or self.mode == "cliente ativo")):
 				self.mode = 'cliente ativo'
 				hosts = self.table.getHosts()
@@ -358,7 +366,6 @@ class Node:
 				comando = input()
 				if comando in hosts:
 					self.send_SA(comando) 
-					threading.Thread(target=self.gestorUpdatePathSA,args=()).start() 
 				
 			elif(comando=="cc" and self.mode=='server'):
 				self.send_CC()

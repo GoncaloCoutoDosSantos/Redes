@@ -13,11 +13,11 @@ Tipos - \x00 = data
 """
 
 
-TIMEOUT = 0.5
+TIMEOUT = 1
 SIZE = 20480#1024 #tamanho maximo dos pacotes
 
 class Connection:
-	timeout = 0.5 #definition of timeout in seconds
+	timeout = 1 #definition of timeout in seconds
 	max_tries = 20 #number of max tries to do a connection
 
 
